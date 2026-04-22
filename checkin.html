@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════╗
+║    LAPIDADOS CLUB — CHECK-IN SEMANAL v1.0            ║
+║    Conectado ao Supabase do Lapidados Control        ║
+╠══════════════════════════════════════════════════════╣
+║  SQL — Rodar no Supabase SQL Editor ANTES de usar:   ║
+║                                                      ║
+║  CREATE TABLE IF NOT EXISTS checkins (               ║
+║    id              uuid DEFAULT                      ║
+║                    gen_random_uuid() PRIMARY KEY,    ║
+║    patient_id      uuid NOT NULL,                    ║
+║    weight          numeric(5,2),                     ║
+║    height          numeric(5,2),                     ║
+║    diet_score      int CHECK                         ║
+║                    (diet_score BETWEEN 0 AND 10),    ║
+║    off_plan_meals  int DEFAULT 0,                    ║
+║    training_score  int CHECK                         ║
+║                    (training_score BETWEEN 0 AND 10),║
+║    cardio_done     boolean DEFAULT false,            ║
+║    hunger_level    int CHECK                         ║
+║                    (hunger_level BETWEEN 0 AND 10),  ║
+║    energy_level    int CHECK                         ║
+║                    (energy_level BETWEEN 0 AND 10),  ║
+║    main_difficulty text,                             ║
+║    external_factors text,                            ║
+║    wins            text,                             ║
+║    improvements    text,                             ║
+║    needs_help      text,                             ║
+║    lapidados_score int,                              ║
+║    created_at      timestamptz DEFAULT now()         ║
+║  );                                                  ║
+║                                                      ║
+║  ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;     ║
+║                                                      ║
+║  -- Formulário público pode inserir                  ║
+║  CREATE POLICY "checkins_anon_insert"                ║
+║    ON checkins FOR INSERT WITH CHECK (true);         ║
+║                                                      ║
+║  -- Leitura apenas para autenticados (nutricionista) ║
+║  CREATE POLICY "checkins_auth_select"                ║
+║    ON checkins FOR SELECT                            ║
+║    USING (auth.role() = 'authenticated');            ║
+║                                                      ║
+║  🔑 Substituir credenciais na linha ~75              ║
+╚══════════════════════════════════════════════════════╝
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="theme-color" content="#080808"/>
+  <meta name="description" content="Check-in semanal do Lapidados Club"/>
+  <title>Check-in Semanal · Lapidados Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --o:    #FF5C1A;
+      --o2:   #FF3D00;
+      --og:   rgba(255,92,26,.18);
+      --og2:  rgba(255,92,26,.08);
+      --bg:   #080808;
+      --s1:   #111111;
+      --s2:   #191919;
+      --s3:   #222222;
+      --br:   rgba(255,255,255,.07);
+      --br2:  rgba(255,92,26,.25);
+      --t1:   #F2F2F2;
+      --t2:   #999;
+      --t3:   #555;
+      --green:#22c55e;
+    }
+
+    /* ─── RESET ─── */
+    *, *::before, *::after {
+      margin: 0; padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--bg);
+      color: var(--t1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* BG atmosphere */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 75% 45% at 50% 0%, rgba(255,92,26,.13) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 90% 90%, rgba(255,61,0,.07) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ─── APP SHELL ─── */
+    .app {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    /* ─── TOP BAR ─── */
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(8,8,8,.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--br);
+      padding: 13px 20px 11px;
+    }
+    .topbar-inner {
+      max-width: 480px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; font-weight: 900;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--o);
+    }
+    .topbar-logo span { color: var(--t3); }
+    .step-counter {
+      font-size: 11.5px; font-weight: 600;
+      color: var(--t3); letter-spacing: .5px;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+
+    /* ─── PROGRESS BAR ─── */
+    .progress-track {
+      height: 3px; background: var(--s3);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--o), var(--o2));
+      transition: width .55s cubic-bezier(.4,0,.2,1);
+      border-radius: 0 2px 2px 0;
+      width: 0%;
+    }
+
+    /* ─── MAIN CONTENT ─── */
+    .main {
+      flex: 1;
+      max-width: 480px; width: 100%;
+      margin: 0 auto;
+      padding: 0 20px 56px;
+    }
+
+    /* ─── STEP SYSTEM ─── */
+    .step { display: none; }
+    .step.active {
+      display: block;
+      animation: stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards;
+    }
+    @keyframes stepIn {
+      from { opacity: 0; transform: translateX(32px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ─── STEP HEAD ─── */
+    .step-head { padding: 30px 0 22px; }
+    .step-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--og2);
+      border: 1px solid var(--br2);
+      border-radius: 100px;
+      padding: 4px 13px;
+      font-size: 10.5px; font-weight: 700;
+      color: var(--o); letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .step-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 33px; font-weight: 900;
+      line-height: 1.05; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--t1);
+    }
+    .step-title em { font-style: normal; color: var(--o); }
+    .step-sub {
+      font-size: 13.5px; color: var(--t2);
+      line-height: 1.6; margin-top: 8px; font-weight: 300;
+    }
+
+    /* ─── CARD ─── */
+    .card {
+      background: var(--s2);
+      border: 1px solid var(--br);
+      border-radius: 18px;
+      padding: 20px 18px;
+      margin-bottom: 12px;
+    }
+    .card-question {
+      font-size: 14.5px; font-weight: 600;
+      color: var(--t1); margin-bottom: 14px; line-height: 1.45;
+    }
+
+    /* ─── INPUTS ─── */
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    .field label {
+      font-size: 10.5px; font-weight: 700;
+      color: var(--t3); letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .input-wrap { position: relative; }
+    .input-wrap input {
+      padding-right: 46px;
+    }
+    .input-unit {
+      position: absolute; right: 15px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 11.5px; font-weight: 700;
+      color: var(--t3); letter-spacing: .5px;
+      pointer-events: none;
+    }
+    input[type="number"],
+    textarea {
+      background: var(--s3);
+      border: 1.5px solid var(--br);
+      border-radius: 12px;
+      padding: 13px 15px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 16px; font-weight: 500;
+      color: var(--t1); outline: none;
+      transition: border-color .2s, background .2s;
+      width: 100%;
+      -webkit-appearance: none;
+    }
+    input[type="number"]:focus,
+    textarea:focus {
+      border-color: var(--o);
+      background: rgba(255,92,26,.04);
+    }
+    input[type="number"]::placeholder,
+    textarea::placeholder { color: var(--t3); font-weight: 300; }
+    textarea { resize: none; min-height: 88px; line-height: 1.6; font-size: 14px; }
+
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ─── SCALE BUTTONS (0–10) ─── */
+    .scale-labels {
+      display: flex; justify-content: space-between;
+      font-size: 10.5px; color: var(--t3);
+      margin-bottom: 9px; font-weight: 500;
+    }
+    .scale-grid {
+      display: grid;
+      grid-template-columns: repeat(11, 1fr);
+      gap: 4px;
+    }
+    .sc-btn {
+      aspect-ratio: 1;
+      border: 1.5px solid var(--br);
+      border-radius: 10px;
+      background: var(--s3);
+      color: var(--t3);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 900;
+      cursor: pointer;
+      transition: all .14s ease;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; line-height: 1;
+    }
+    .sc-btn:active { transform: scale(.86); }
+    .sc-btn.active {
+      border-color: transparent; color: #fff;
+      transform: scale(1.1);
+    }
+    /* Color tiers for score context */
+    .sc-btn[data-val="0"].active,
+    .sc-btn[data-val="1"].active,
+    .sc-btn[data-val="2"].active {
+      background: linear-gradient(135deg,#ef4444,#dc2626);
+      box-shadow: 0 4px 14px rgba(239,68,68,.4);
+    }
+    .sc-btn[data-val="3"].active,
+    .sc-btn[data-val="4"].active {
+      background: linear-gradient(135deg,#f59e0b,#d97706);
+      box-shadow: 0 4px 14px rgba(245,158,11,.4);
+    }
+    .sc-btn[data-val="5"].active,
+    .sc-btn[data-val="6"].active,
+    .sc-btn[data-val="7"].active {
+      background: linear-gradient(135deg,var(--o),var(--o2));
+      box-shadow: 0 4px 14px rgba(255,92,26,.4);
+    }
+    .sc-btn[data-val="8"].active,
+    .sc-btn[data-val="9"].active,
+    .sc-btn[data-val="10"].active {
+      background: linear-gradient(135deg,#22c55e,#16a34a);
+      box-shadow: 0 4px 14px rgba(34,197,94,.4);
+    }
+
+    /* ─── STEPPER ─── */
+    .stepper {
+      display: flex; align-items: center;
+      background: var(--s3);
+      border: 1.5px solid var(--br);
+      border-radius: 13px; overflow: hidden;
+    }
+    .stp-btn {
+      width: 56px; height: 54px; flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--t2); font-size: 26px; font-weight: 300;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .stp-btn:active { background: var(--og2); color: var(--o); }
+    .stp-val {
+      flex: 1; text-align: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 24px; font-weight: 900; color: var(--t1);
+      border-left: 1px solid var(--br);
+      border-right: 1px solid var(--br);
+      padding: 14px 0;
+    }
+
+    /* ─── TOGGLE CARDIO ─── */
+    .toggle-pair {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .tog-btn {
+      padding: 14px 8px;
+      border-radius: 13px;
+      border: 1.5px solid var(--br);
+      background: var(--s3);
+      color: var(--t2);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex; align-items: center;
+      justify-content: center; gap: 7px;
+    }
+    .tog-btn:active { transform: scale(.97); }
+    .tog-yes.sel {
+      background: rgba(34,197,94,.1);
+      border-color: rgba(34,197,94,.4);
+      color: var(--green);
+    }
+    .tog-no.sel {
+      background: rgba(239,68,68,.09);
+      border-color: rgba(239,68,68,.35);
+      color: #ef4444;
+    }
+
+    /* ─── NAV BUTTONS ─── */
+    .nav-area {
+      padding-top: 6px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn-next {
+      width: 100%; padding: 17px 20px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--o), var(--o2));
+      border: none; cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 900;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #fff;
+      box-shadow: 0 8px 28px rgba(255,92,26,.35);
+      transition: transform .15s, box-shadow .15s;
+      display: flex; align-items: center;
+      justify-content: center; gap: 10px;
+    }
+    .btn-next:active { transform: scale(.98); box-shadow: 0 4px 14px rgba(255,92,26,.2); }
+    .btn-next:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-back {
+      background: none; border: none; cursor: pointer;
+      font-family: 'Barlow', sans-serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--t3); text-align: center;
+      padding: 6px; transition: color .2s;
+    }
+    .btn-back:hover { color: var(--t2); }
+
+    /* ─── ERROR MSG ─── */
+    .err {
+      background: rgba(239,68,68,.09);
+      border: 1px solid rgba(239,68,68,.25);
+      border-radius: 11px; padding: 11px 15px;
+      font-size: 13px; color: #ef4444;
+      margin-bottom: 10px; display: none;
+    }
+    .err.show { display: block; }
+
+    /* ─── LOADING SPINNER ─── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─────────────────────────────── */
+    /* STEP 0: WELCOME                 */
+    /* ─────────────────────────────── */
+    .welcome {
+      padding: 44px 0 36px;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+    }
+    .av-shell {
+      width: 100px; height: 100px;
+      position: relative; margin-bottom: 24px;
+    }
+    .av-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(
+        transparent 0deg,
+        rgba(255,92,26,.15) 20deg,
+        var(--o) 140deg,
+        var(--o2) 220deg,
+        rgba(255,61,0,.2) 300deg,
+        transparent 340deg
+      );
+      animation: spin 3.5s linear infinite;
+    }
+    .av-inner {
+      position: absolute; inset: 4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1c0800, var(--s2));
+      border: 2px solid var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .welcome-pre {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11.5px; font-weight: 800;
+      letter-spacing: 3.5px; text-transform: uppercase;
+      color: var(--o); margin-bottom: 8px;
+    }
+    .welcome-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 40px; font-weight: 900;
+      line-height: 1.0; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--t1);
+      margin-bottom: 12px;
+    }
+    .welcome-title em { font-style: normal; color: var(--o); }
+    .welcome-body {
+      font-size: 14px; color: var(--t2);
+      line-height: 1.7; max-width: 295px;
+      font-weight: 300; margin-bottom: 22px;
+    }
+    .chips-row {
+      display: flex; gap: 7px;
+      flex-wrap: wrap; justify-content: center;
+      margin-bottom: 26px;
+    }
+    .chip {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--s2); border: 1px solid var(--br);
+      border-radius: 100px; padding: 5px 13px;
+      font-size: 12px; font-weight: 500; color: var(--t2);
+    }
+    .btn-start {
+      width: 100%; padding: 18px 20px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--o), var(--o2));
+      border: none; cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 19px; font-weight: 900;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: #fff; animation: glow-pulse 2.4s ease-in-out infinite;
+      transition: transform .15s;
+    }
+    .btn-start:active { transform: scale(.98); }
+    @keyframes glow-pulse {
+      0%,100% { box-shadow: 0 8px 32px rgba(255,92,26,.38); }
+      50%      { box-shadow: 0 8px 48px rgba(255,92,26,.65); }
+    }
+    .time-note {
+      margin-top: 11px;
+      font-size: 12px; color: var(--t3);
+      display: flex; align-items: center; gap: 5px;
+      justify-content: center;
+    }
+    .time-note svg { width: 13px; height: 13px; }
+
+    /* ─────────────────────────────── */
+    /* STEP 7: SCORE REVEAL            */
+    /* ─────────────────────────────── */
+    .score-screen {
+      padding: 32px 0 16px;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+    }
+    .ring-shell {
+      width: 190px; height: 190px;
+      position: relative; margin-bottom: 22px;
+    }
+    .ring-svg { width: 190px; height: 190px; transform: rotate(-90deg); }
+    .ring-track { fill: none; stroke: var(--s3); stroke-width: 11; }
+    .ring-arc {
+      fill: none; stroke-width: 11; stroke-linecap: round;
+      stroke-dasharray: 503;
+      stroke-dashoffset: 503;
+      transition: stroke-dashoffset 2s cubic-bezier(.4,0,.2,1), stroke .5s ease;
+    }
+    .ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .score-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 60px; font-weight: 900;
+      line-height: 1; letter-spacing: -1px; color: var(--t1);
+    }
+    .score-lbl {
+      font-size: 9.5px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--t3); margin-top: 2px;
+    }
+    .tier-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 27px; font-weight: 900;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .tier-msg {
+      font-size: 13.5px; color: var(--t2);
+      font-weight: 300; line-height: 1.65;
+      max-width: 285px; margin-bottom: 24px;
+    }
+
+    /* breakdown card */
+    .breakdown {
+      width: 100%; background: var(--s2);
+      border: 1px solid var(--br);
+      border-radius: 18px; padding: 20px 18px;
+      margin-bottom: 20px; text-align: left;
+    }
+    .bd-title {
+      font-size: 10.5px; font-weight: 700;
+      color: var(--t3); letter-spacing: 2px;
+      text-transform: uppercase; margin-bottom: 16px;
+    }
+    .bd-row {
+      display: flex; align-items: center;
+      margin-bottom: 11px;
+    }
+    .bd-row:last-child { margin-bottom: 0; }
+    .bd-icon { font-size: 14px; width: 22px; flex-shrink: 0; }
+    .bd-name {
+      font-size: 12.5px; color: var(--t2);
+      font-weight: 500; flex: 1; margin: 0 10px;
+    }
+    .bd-bar-wrap {
+      flex: 2; height: 5px;
+      background: var(--s3); border-radius: 3px;
+      overflow: hidden; margin-right: 10px;
+    }
+    .bd-bar {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg,var(--o),var(--o2));
+      width: 0%;
+      transition: width 1.6s cubic-bezier(.4,0,.2,1);
+    }
+    .bd-pts {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13.5px; font-weight: 800;
+      color: var(--o); min-width: 38px; text-align: right;
+    }
+
+    .success-note {
+      font-size: 13px; color: var(--t3);
+      text-align: center; line-height: 1.65;
+    }
+
+    /* ─── FADE IN ─── */
+    .fi { opacity:0; transform:translateY(18px); animation:fi .45s ease forwards; }
+    @keyframes fi { to { opacity:1; transform:none; } }
+    .d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.18s}
+    .d4{animation-delay:.26s}.d5{animation-delay:.34s}
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TOP BAR (hidden on welcome) -->
+  <div class="topbar" id="topbar" style="display:none">
+    <div class="topbar-inner">
+      <div class="topbar-logo">LAPIDADOS <span>CLUB</span></div>
+      <div class="step-counter" id="stepLbl">1 / 6</div>
+    </div>
+  </div>
+  <div class="progress-track" id="progressTrack" style="display:none">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <div class="main">
+
+    <!-- ══════════════════════════════════════
+         STEP 0 · BOAS-VINDAS
+    ══════════════════════════════════════ -->
+    <div class="step active" id="s0">
+      <div class="welcome fi d1">
+        <div class="av-shell">
+          <div class="av-ring"></div>
+          <div class="av-inner">🔥</div>
+        </div>
+        <div class="welcome-pre">Lapidados Club</div>
+        <h1 class="welcome-title">E aí, <em id="pName">campeão</em>!</h1>
+        <p class="welcome-body">
+          Seu check-in semanal está aqui. Responde rápido, o Leo analisa tudo e já vai te orientar com base nos seus dados.
+        </p>
+        <div class="chips-row">
+          <div class="chip">⏱ ~2 min</div>
+          <div class="chip">📊 Score ao final</div>
+          <div class="chip">📅 Semana <span id="weekNum">—</span></div>
+        </div>
+        <button class="btn-start" onclick="goTo(1)">
+          Iniciar Check-in →
+        </button>
+        <div class="time-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Seus dados ficam 100% seguros e privados
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 1 · DADOS FÍSICOS
+    ══════════════════════════════════════ -->
+    <div class="step" id="s1">
+      <div class="step-head">
+        <div class="step-tag">📏 Dados físicos</div>
+        <h2 class="step-title">Corpo &amp;<br><em>Medidas</em></h2>
+        <p class="step-sub">Registre como seu corpo está essa semana.</p>
+      </div>
+
+      <div class="card">
+        <div class="two-col">
+          <div class="field">
+            <label>Peso atual</label>
+            <div class="input-wrap">
+              <input type="number" id="f-weight" placeholder="75.5" step="0.1" min="30" max="300"/>
+              <span class="input-unit">kg</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Altura</label>
+            <div class="input-wrap">
+              <input type="number" id="f-height" placeholder="175" min="100" max="250"/>
+              <span class="input-unit">cm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="err" id="e1">⚠ Preencha seu peso e altura para continuar.</div>
+      <div class="nav-area">
+        <button class="btn-next" onclick="v1()">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo(0)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 2 · ALIMENTAÇÃO
+    ══════════════════════════════════════ -->
+    <div class="step" id="s2">
+      <div class="step-head">
+        <div class="step-tag">🥗 Alimentação</div>
+        <h2 class="step-title">Adesão ao<br><em>Plano</em></h2>
+        <p class="step-sub">Seja honesto — os dados existem pra te ajudar, não pra te julgar.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Como você avalia sua dieta essa semana?</div>
+        <div class="scale-labels"><span>😓 Péssima</span><span>🔥 Perfeita</span></div>
+        <div class="scale-grid" id="sg-diet"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Quantas refeições saíram do plano?</div>
+        <div class="stepper" id="off-plan-stepper">
+          <button class="stp-btn" onclick="stp('off',-1)">−</button>
+          <div class="stp-val" id="off-val">0</div>
+          <button class="stp-btn" onclick="stp('off',1)">+</button>
+        </div>
+      </div>
+
+      <div class="err" id="e2">⚠ Selecione uma nota para a dieta.</div>
+      <div class="nav-area">
+        <button class="btn-next" onclick="v2()">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo(1)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 3 · TREINO
+    ══════════════════════════════════════ -->
+    <div class="step" id="s3">
+      <div class="step-head">
+        <div class="step-tag">🏋️ Treino</div>
+        <h2 class="step-title">Treino &amp;<br><em>Movimento</em></h2>
+        <p class="step-sub">Como foram seus treinos durante a semana?</p>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Como você avalia seu treino essa semana?</div>
+        <div class="scale-labels"><span>😴 Fraco</span><span>💪 Intenso</span></div>
+        <div class="scale-grid" id="sg-training"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Fez cardio essa semana?</div>
+        <div class="toggle-pair">
+          <button class="tog-btn tog-yes" id="tog-yes" onclick="setCardio(true)">
+            ✅ Sim, fiz
+          </button>
+          <button class="tog-btn tog-no" id="tog-no" onclick="setCardio(false)">
+            ❌ Não fiz
+          </button>
+        </div>
+      </div>
+
+      <div class="err" id="e3">⚠ Avalie o treino e selecione o cardio.</div>
+      <div class="nav-area">
+        <button class="btn-next" onclick="v3()">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo(2)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 4 · ENERGIA & FOME
+    ══════════════════════════════════════ -->
+    <div class="step" id="s4">
+      <div class="step-head">
+        <div class="step-tag">⚡ Sensações</div>
+        <h2 class="step-title">Energia &amp;<br><em>Fome</em></h2>
+        <p class="step-sub">Como seu corpo e mente responderam essa semana?</p>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Nível de energia geral na semana</div>
+        <div class="scale-labels"><span>😴 No chão</span><span>⚡ No máximo</span></div>
+        <div class="scale-grid" id="sg-energy"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Nível de fome que sentiu</div>
+        <div class="scale-labels"><span>😌 Saciado</span><span>🤤 Com muita fome</span></div>
+        <div class="scale-grid" id="sg-hunger"></div>
+      </div>
+
+      <div class="err" id="e4">⚠ Avalie energia e fome para continuar.</div>
+      <div class="nav-area">
+        <button class="btn-next" onclick="v4()">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo(3)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 5 · DIFICULDADES
+    ══════════════════════════════════════ -->
+    <div class="step" id="s5">
+      <div class="step-head">
+        <div class="step-tag">🎯 Reflexão</div>
+        <h2 class="step-title">O que <em>pesou</em><br>essa semana?</h2>
+        <p class="step-sub">Essas respostas guiam os ajustes do Leo. Seja direto.</p>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Maior dificuldade da semana</label>
+          <textarea id="f-difficulty" placeholder="Ex: Perdi motivação para treinar na quarta, tive uma saída social no final de semana e escapuliu…"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Fatores externos que afetaram</label>
+          <textarea id="f-external" placeholder="Ex: Semana muito estressante no trabalho, noite de sono ruim, viagem de negócios…"></textarea>
+        </div>
+      </div>
+
+      <div class="nav-area">
+        <button class="btn-next" onclick="goTo(6)">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo(4)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 6 · CONQUISTAS + ENVIO
+    ══════════════════════════════════════ -->
+    <div class="step" id="s6">
+      <div class="step-head">
+        <div class="step-tag">🏆 Conquistas</div>
+        <h2 class="step-title">O que você<br><em>mandou bem?</em></h2>
+        <p class="step-sub">Registrar as vitórias é tão importante quanto corrigir o que falhou.</p>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Vitórias da semana</label>
+          <textarea id="f-wins" placeholder="Ex: Segui o plano de segunda a sexta sem escorregar, bati minha meta de proteína todos os dias…"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>O que pode melhorar?</label>
+          <textarea id="f-improvements" placeholder="Ex: Preciso melhorar o sono, tomar mais água, ser mais consistente nos treinos de fim de semana…"></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:var(--br2);background:rgba(255,92,26,.04)">
+        <div class="field">
+          <label>🙋 Precisa de ajuda do Leo?</label>
+          <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que…"></textarea>
+        </div>
+      </div>
+
+      <div class="err" id="e-submit">❌ Erro ao salvar. Verifique sua conexão e tente de novo.</div>
+      <div class="nav-area">
+        <button class="btn-next" id="btn-send" onclick="submit()">
+          <span id="send-txt">Enviar Check-in 🔥</span>
+          <span id="send-load" style="display:none;align-items:center;gap:10px;">
+            <div class="spinner"></div> Enviando…
+          </span>
+        </button>
+        <button class="btn-back" onclick="goTo(5)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 7 · SCORE REVEAL
+    ══════════════════════════════════════ -->
+    <div class="step" id="s7">
+      <div class="score-screen">
+        <div class="ring-shell fi d1">
+          <svg class="ring-svg" viewBox="0 0 190 190">
+            <circle class="ring-track" cx="95" cy="95" r="80"/>
+            <circle class="ring-arc" id="ringArc" cx="95" cy="95" r="80"/>
+          </svg>
+          <div class="ring-center">
+            <div class="score-num" id="scoreNum">0</div>
+            <div class="score-lbl">LAPIDADOS SCORE</div>
+          </div>
+        </div>
+
+        <div class="tier-name fi d2" id="tierName">—</div>
+        <p class="tier-msg fi d3" id="tierMsg">—</p>
+
+        <div class="breakdown fi d4">
+          <div class="bd-title">📊 Detalhamento do Score</div>
+          <div class="bd-row">
+            <span class="bd-icon">🥗</span>
+            <span class="bd-name">Dieta</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-diet"></div></div>
+            <span class="bd-pts" id="bp-diet">0/30</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">🏋️</span>
+            <span class="bd-name">Treino</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-train"></div></div>
+            <span class="bd-pts" id="bp-train">0/25</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">⚡</span>
+            <span class="bd-name">Energia</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-energy"></div></div>
+            <span class="bd-pts" id="bp-energy">0/20</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">🏃</span>
+            <span class="bd-name">Cardio</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-cardio"></div></div>
+            <span class="bd-pts" id="bp-cardio">0/10</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">🍽</span>
+            <span class="bd-name">Aderência</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-offplan"></div></div>
+            <span class="bd-pts" id="bp-offplan">0/10</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">😤</span>
+            <span class="bd-name">Saciedade</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-hunger"></div></div>
+            <span class="bd-pts" id="bp-hunger">0/5</span>
+          </div>
+        </div>
+
+        <p class="success-note fi d5">
+          ✅ Check-in enviado com sucesso!<br>
+          O Leo vai analisar seus dados e entrar em contato. 🔥
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ╔══════════════════════════════════════════╗
+// ║  ⚠️  SUBSTITUIR SUAS CREDENCIAIS AQUI   ║
+// ╚══════════════════════════════════════════╝
+const SUPABASE_URL = 'https://SEU-PROJETO.supabase.co';
+const SUPABASE_KEY = 'sua-anon-key-aqui';
+// ═══════════════════════════════════════════
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ── State ─────────────────────────────── */
+const D = {
+  patient_id:      null,
+  weight:          null,
+  height:          null,
+  diet_score:      null,
+  off_plan_meals:  0,
+  training_score:  null,
+  cardio_done:     null,
+  energy_level:    null,
+  hunger_level:    null,
+  main_difficulty: '',
+  external_factors:'',
+  wins:            '',
+  improvements:    '',
+  needs_help:      '',
+};
+let cur = 0;
+const TOTAL = 6;
+
+/* ── URL params ─────────────────────────── */
+(function () {
+  const p    = new URLSearchParams(window.location.search);
+  D.patient_id = p.get('patient_id') || null;
+  const name   = p.get('name');
+  if (name) document.getElementById('pName').textContent = decodeURIComponent(name);
+
+  // ISO week number
+  const now   = new Date();
+  const jan1  = new Date(now.getFullYear(), 0, 1);
+  const week  = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  document.getElementById('weekNum').textContent = week;
+})();
+
+/* ── Build scale grids ──────────────────── */
+function buildScale(id, key) {
+  const grid = document.getElementById(id);
+  for (let i = 0; i <= 10; i++) {
+    const b = document.createElement('button');
+    b.type       = 'button';
+    b.className  = 'sc-btn';
+    b.dataset.val = i;
+    b.textContent = i;
+    b.addEventListener('click', () => {
+      grid.querySelectorAll('.sc-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      D[key] = i;
+    });
+    grid.appendChild(b);
+  }
+}
+buildScale('sg-diet',     'diet_score');
+buildScale('sg-training', 'training_score');
+buildScale('sg-energy',   'energy_level');
+buildScale('sg-hunger',   'hunger_level');
+
+/* ── Stepper ────────────────────────────── */
+function stp(k, d) {
+  if (k === 'off') {
+    D.off_plan_meals = Math.max(0, D.off_plan_meals + d);
+    document.getElementById('off-val').textContent = D.off_plan_meals;
+  }
+}
+
+/* ── Cardio toggle ──────────────────────── */
+function setCardio(v) {
+  D.cardio_done = v;
+  document.getElementById('tog-yes').classList.toggle('sel', v);
+  document.getElementById('tog-no').classList.toggle('sel', !v);
+}
+
+/* ── Navigation ─────────────────────────── */
+function goTo(n) {
+  document.getElementById('s' + cur).classList.remove('active');
+  document.getElementById('s' + n).classList.add('active');
+  cur = n;
+  updateBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateBar() {
+  const bar    = document.getElementById('progressFill');
+  const lbl    = document.getElementById('stepLbl');
+  const topbar = document.getElementById('topbar');
+  const track  = document.getElementById('progressTrack');
+
+  if (cur === 0) {
+    topbar.style.display = 'none';
+    track.style.display  = 'none';
+    return;
+  }
+  topbar.style.display = '';
+  track.style.display  = '';
+
+  if (cur === 7) {
+    bar.style.width  = '100%';
+    lbl.textContent  = '✓ Concluído';
+    return;
+  }
+  bar.style.width = (cur / TOTAL * 100) + '%';
+  lbl.textContent = cur + ' / ' + TOTAL;
+}
+
+/* ── Validations ────────────────────────── */
+function v1() {
+  const w = parseFloat(document.getElementById('f-weight').value);
+  const h = parseFloat(document.getElementById('f-height').value);
+  if (!w || !h || w < 30 || h < 100) { show('e1'); return; }
+  hide('e1'); D.weight = w; D.height = h; goTo(2);
+}
+function v2() {
+  if (D.diet_score === null) { show('e2'); return; }
+  hide('e2'); goTo(3);
+}
+function v3() {
+  if (D.training_score === null || D.cardio_done === null) { show('e3'); return; }
+  hide('e3'); goTo(4);
+}
+function v4() {
+  if (D.energy_level === null || D.hunger_level === null) { show('e4'); return; }
+  hide('e4'); goTo(5);
+}
+function show(id) { document.getElementById(id).classList.add('show'); }
+function hide(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ── Score ──────────────────────────────── */
+function calcScore() {
+  const diet    = (D.diet_score / 10) * 30;
+  const train   = (D.training_score / 10) * 25;
+  const energy  = (D.energy_level / 10) * 20;
+  const cardio  = D.cardio_done ? 10 : 0;
+  const offPlan = Math.max(0, 10 - D.off_plan_meals * 2);
+  const hunger  = ((10 - D.hunger_level) / 10) * 5;
+  return {
+    total:   Math.round(diet + train + energy + cardio + offPlan + hunger),
+    diet:    Math.round(diet),
+    train:   Math.round(train),
+    energy:  Math.round(energy),
+    cardio:  cardio,
+    offPlan: Math.round(offPlan),
+    hunger:  Math.round(hunger),
+  };
+}
+
+function tier(s) {
+  if (s >= 90) return { name:'🔥 LAPIDADO!',    color:'#FF5C1A', msg:'Semana impecável. Você está no nível mais alto do Lapidados Club. Continuidade é tudo.' };
+  if (s >= 75) return { name:'💪 NO CAMINHO',   color:'#22c55e', msg:'Semana muito sólida. Pequenos ajustes vão te levar ao próximo nível.' };
+  if (s >= 55) return { name:'⚡ PROGREDINDO',  color:'#3b82f6', msg:'Boa base. Há espaço para crescer — reveja os pontos que pesaram mais.' };
+  if (s >= 40) return { name:'🎯 FOCO TOTAL',   color:'#f59e0b', msg:'Semana desafiadora. Identifique seu maior bloqueio e resolva primeiro.' };
+  return         { name:'🚨 ATENÇÃO TOTAL', color:'#ef4444', msg:'Semana difícil — mas o Leo já vai ajustar. Não desiste!' };
+}
+
+/* ── Animate Score Screen ───────────────── */
+function animateScore(sc) {
+  const t   = tier(sc.total);
+  const arc = document.getElementById('ringArc');
+  const circ = 2 * Math.PI * 80; // r=80 → ~502.65
+
+  // Tier text
+  document.getElementById('tierName').textContent = t.name;
+  document.getElementById('tierName').style.color = t.color;
+  document.getElementById('tierMsg').textContent  = t.msg;
+
+  // Ring animation
+  arc.style.strokeDasharray  = circ;
+  arc.style.strokeDashoffset = circ;
+  arc.style.stroke           = t.color;
+  setTimeout(() => {
+    arc.style.strokeDashoffset = circ - (sc.total / 100) * circ;
+  }, 250);
+
+  // Number counter
+  const el = document.getElementById('scoreNum');
+  let n = 0;
+  const step = Math.max(1, Math.ceil(sc.total / 55));
+  const t2 = setInterval(() => {
+    n = Math.min(n + step, sc.total);
+    el.textContent = n;
+    if (n >= sc.total) clearInterval(t2);
+  }, 22);
+
+  // Breakdown bars
+  const maxMap  = { diet:30, train:25, energy:20, cardio:10, offPlan:10, hunger:5 };
+  const barMap  = { diet:'bb-diet', train:'bb-train', energy:'bb-energy', cardio:'bb-cardio', offPlan:'bb-offplan', hunger:'bb-hunger' };
+  const ptsMap  = { diet:'bp-diet', train:'bp-train', energy:'bp-energy', cardio:'bp-cardio', offPlan:'bp-offplan', hunger:'bp-hunger' };
+  const maxLabl = { diet:30, train:25, energy:20, cardio:10, offPlan:10, hunger:5 };
+
+  setTimeout(() => {
+    Object.keys(maxMap).forEach(k => {
+      const pct = (sc[k] / maxMap[k]) * 100;
+      document.getElementById(barMap[k]).style.width = pct + '%';
+      document.getElementById(ptsMap[k]).textContent = sc[k] + '/' + maxLabl[k];
+    });
+  }, 450);
+}
+
+/* ── Submit ─────────────────────────────── */
+async function submit() {
+  // Read text fields
+  D.main_difficulty  = document.getElementById('f-difficulty').value.trim();
+  D.external_factors = document.getElementById('f-external').value.trim();
+  D.wins             = document.getElementById('f-wins').value.trim();
+  D.improvements     = document.getElementById('f-improvements').value.trim();
+  D.needs_help       = document.getElementById('f-help').value.trim();
+
+  const btn    = document.getElementById('btn-send');
+  const txt    = document.getElementById('send-txt');
+  const load   = document.getElementById('send-load');
+  const errEl  = document.getElementById('e-submit');
+
+  const sc = calcScore();
+
+  // Loading state
+  btn.disabled         = true;
+  txt.style.display    = 'none';
+  load.style.display   = 'flex';
+  errEl.classList.remove('show');
+
+  const payload = {
+    patient_id:       D.patient_id,
+    weight:           D.weight,
+    height:           D.height,
+    diet_score:       D.diet_score,
+    off_plan_meals:   D.off_plan_meals,
+    training_score:   D.training_score,
+    cardio_done:      D.cardio_done,
+    hunger_level:     D.hunger_level,
+    energy_level:     D.energy_level,
+    main_difficulty:  D.main_difficulty,
+    external_factors: D.external_factors,
+    wins:             D.wins,
+    improvements:     D.improvements,
+    needs_help:       D.needs_help,
+    lapidados_score:  sc.total,
+  };
+
+  try {
+    const { error } = await sb.from('checkins').insert(payload);
+    if (error) throw error;
+    goTo(7);
+    setTimeout(() => animateScore(sc), 350);
+  } catch (err) {
+    console.error('Supabase error:', err);
+    errEl.classList.add('show');
+    btn.disabled       = false;
+    txt.style.display  = '';
+    load.style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>
