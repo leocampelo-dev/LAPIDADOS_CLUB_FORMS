@@ -501,6 +501,8 @@
     /* ─────────────────────────────── */
     /* STEP 7: SCORE REVEAL            */
     /* ─────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(-10px)}80%{opacity:1}100%{opacity:0;transform:translateY(80px)}}
     .score-screen {
       padding: 32px 0 16px;
       display: flex; flex-direction: column;
@@ -624,6 +626,14 @@
         </div>
         <div class="welcome-pre">Lapidados Club</div>
         <h1 class="welcome-title">E aí, <em id="pName">campeão</em>!</h1>
+        <!-- Rank badge — preenchido via JS quando patient_id está na URL -->
+        <div id="welcomeRankWrap" style="display:none;margin:10px auto 4px;text-align:center">
+          <div id="welcomeRankBadge" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:24px;font-weight:700;font-size:14px;letter-spacing:-.2px;border:2px solid">
+            <span id="welcomeRankIcon" style="font-size:20px">🪨</span>
+            <span id="welcomeRankName">Bruto</span>
+            <span id="welcomeRankPts" style="font-size:11px;opacity:.75;font-weight:500"></span>
+          </div>
+        </div>
         <p class="welcome-body">
           Seu check-in semanal está aqui. Responde rápido, o Leo analisa tudo e já vai te orientar com base nos seus dados.
         </p>
@@ -927,6 +937,19 @@
           ✅ Check-in enviado com sucesso!<br>
           O Leo vai analisar seus dados e entrar em contato. 🔥
         </p>
+
+        <!-- RANK BLOCK — preenchido via JS após fetch do histórico -->
+        <div id="rankBlock" style="display:none;margin-top:20px;padding:16px 18px;border-radius:14px;border:2px solid;text-align:center;animation:fadeUp .5s ease .8s both">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px" id="rankBlockLabel">SEU RANK ATUAL</div>
+          <div style="font-size:32px;margin-bottom:4px" id="rankBlockIcon">🪨</div>
+          <div style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px" id="rankBlockName">Bruto</div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px" id="rankBlockPts">0 pts</div>
+          <div style="font-size:12px;opacity:.7;margin-bottom:10px" id="rankBlockNext"></div>
+          <div style="height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-bottom:14px">
+            <div id="rankBlockBar" style="height:100%;border-radius:3px;background:#fff;transition:width 1.2s ease .2s;width:0%"></div>
+          </div>
+          <div id="rankUpMsg" style="display:none;font-size:13px;line-height:1.6;margin-top:4px;padding:10px;background:rgba(255,255,255,.15);border-radius:9px;text-align:left"></div>
+        </div>
       </div>
     </div>
 
@@ -937,9 +960,104 @@
 // ╔══════════════════════════════════════════╗
 // ║  ⚠️  SUBSTITUIR SUAS CREDENCIAIS AQUI   ║
 // ╚══════════════════════════════════════════╝
-const SUPABASE_URL = 'https://SEU-PROJETO.supabase.co';
-const SUPABASE_KEY = 'sua-anon-key-aqui';
+const SUPABASE_URL = 'https://guxsfjfqywebglymasao.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_NAm0P6HDQvJ0jODRJEdZ5A_2zg9BSDw';
 // ═══════════════════════════════════════════
+
+const RANKS_CFG = [
+  {id:'bruto',      min:0,    max:199,  icon:'🪨', name:'Bruto',     color:'#6b7280', bg:'#1f2937'},
+  {id:'destravado', min:200,  max:499,  icon:'🧠', name:'Destravado',color:'#60a5fa', bg:'#1e3a5f'},
+  {id:'afiado',     min:500,  max:999,  icon:'⚡', name:'Afiado',    color:'#a78bfa', bg:'#2e1065'},
+  {id:'imparavel',  min:1000, max:1999, icon:'🔥', name:'Imparável', color:'#fb923c', bg:'#431407'},
+  {id:'lapidado',   min:2000, max:1e9,  icon:'👑', name:'Lapidado',  color:'#fcd34d', bg:'#78350f'},
+];
+const RANK_MSGS = {
+  bruto:'Você entrou no jogo agora. E aqui não é sobre começar motivado… é sobre não voltar pro padrão de antes.\n\nTeu foco agora é simples: aparecer toda semana. O resto a gente ajusta.',
+  destravado:'Você saiu do automático. E isso já coloca você na frente da maioria.\n\nAgora começa a parte importante: entender o que funciona no seu corpo, criar consistência.',
+  afiado:'Agora começa a ficar diferente. Você não tá só tentando… você tá executando.\n\nConsistência cria resultado. E você já entrou nessa zona.',
+  imparavel:'Aqui já não é mais sobre "seguir plano". É sobre controle.\n\nSeu corpo começa a responder quando suas decisões param de oscilar.',
+  lapidado:'Pouca gente sustenta o que você sustentou até aqui.\n\nVocê não chegou aqui por motivação. Chegou porque começou a agir diferente… mesmo quando não tava com vontade.\n\nIsso é comportamento. Isso é padrão.',
+};
+const PENALTY_PTS = 10;
+const PENALTY_DAYS = 6;
+
+function getRankCfg(pts){ return RANKS_CFG.slice().reverse().find(r=>pts>=r.min)||RANKS_CFG[0]; }
+function rankProg(pts,r){
+  if(r.max>=1e9)return{pct:100,next:0,label:'Rank máximo atingido!'};
+  const pct=Math.min(100,Math.round((pts-r.min)/(r.max-r.min+1)*100));
+  const next=r.max+1-pts;
+  const nr=getRankCfg(r.max+1);
+  return{pct,next,label:next+'pts para '+nr.icon+' '+nr.name};
+}
+
+async function fetchAndShowRank(patientId, newScore) {
+  if (!patientId) return;
+  try {
+    // fetch all checkins for this patient
+    const { data: allC } = await sb.from('checkins')
+      .select('lapidados_score, week_number, year, created_at')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+
+    // fetch invites to calc penalty
+    const { data: invs } = await sb.from('checkin_invites')
+      .select('sent_at, week_number, year')
+      .eq('patient_id', patientId);
+
+    const allCheckins = allC || [];
+    const invites     = invs  || [];
+    const now         = new Date();
+
+    const base = allCheckins.reduce((s,c) => s + (c.lapidados_score||0), 0);
+    const pen  = invites.filter(inv => {
+      const d = Math.floor((now - new Date(inv.sent_at)) / 86400000);
+      if (d < PENALTY_DAYS) return false;
+      return !allCheckins.some(c => c.week_number===inv.week_number && c.year===inv.year);
+    }).length;
+    const totalPts = Math.max(0, base - pen * PENALTY_PTS);
+
+    const prevPts = Math.max(0, totalPts - newScore); // before this check-in
+    const prevRank = getRankCfg(prevPts);
+    const newRank  = getRankCfg(totalPts);
+    const rankChanged = newRank.id !== prevRank.id;
+
+    const r    = newRank;
+    const prog = rankProg(totalPts, r);
+
+    const block = document.getElementById('rankBlock');
+    block.style.display     = '';
+    block.style.borderColor = r.color;
+    block.style.background  = r.bg;
+    block.style.color       = '#fff';
+
+    document.getElementById('rankBlockIcon').textContent = r.icon;
+    document.getElementById('rankBlockName').textContent = r.name.toUpperCase();
+    document.getElementById('rankBlockPts').textContent  = totalPts + ' pts acumulados';
+    document.getElementById('rankBlockNext').textContent = prog.label;
+    document.getElementById('rankBlockLabel').textContent = rankChanged
+      ? '🎉 NOVO RANK DESBLOQUEADO!'
+      : 'SEU RANK ATUAL';
+
+    setTimeout(() => {
+      document.getElementById('rankBlockBar').style.width = prog.pct + '%';
+    }, 300);
+
+    if (rankChanged) {
+      const msgEl  = document.getElementById('rankUpMsg');
+      const msgTxt = RANK_MSGS[r.id] || '';
+      msgEl.style.display = '';
+      msgEl.textContent   = msgTxt;
+      // confetti-like emoji burst
+      const burst = document.createElement('div');
+      burst.style.cssText = 'position:fixed;top:0;left:0;right:0;text-align:center;font-size:28px;pointer-events:none;z-index:999;animation:confettiFall 2.5s ease forwards';
+      burst.textContent = '🎊 🏆 🎉 '+r.icon+' 🎉 🏆 🎊';
+      document.body.appendChild(burst);
+      setTimeout(() => burst.remove(), 2600);
+    }
+  } catch(e) {
+    console.warn('fetchRank error:', e);
+  }
+}
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -959,22 +1077,82 @@ const D = {
   wins:            '',
   improvements:    '',
   needs_help:      '',
+  week_number:     null,
+  year:            null,
 };
 let cur = 0;
 const TOTAL = 6;
 
-/* ── URL params ─────────────────────────── */
-(function () {
+/* ── URL params + fetch name & rank ─────────────────────── */
+(async function () {
   const p    = new URLSearchParams(window.location.search);
   D.patient_id = p.get('patient_id') || null;
-  const name   = p.get('name');
-  if (name) document.getElementById('pName').textContent = decodeURIComponent(name);
 
   // ISO week number
   const now   = new Date();
   const jan1  = new Date(now.getFullYear(), 0, 1);
   const week  = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+  D.week_number = week;
+  D.year = now.getFullYear();
   document.getElementById('weekNum').textContent = week;
+
+  if (!D.patient_id) return;
+
+  try {
+    // 1. Fetch patient name from DB
+    const { data: pat } = await sb
+      .from('patients')
+      .select('name')
+      .eq('id', D.patient_id)
+      .single();
+
+    const firstName = pat?.name?.trim().split(' ')[0] || p.get('name') || null;
+    if (firstName) {
+      document.getElementById('pName').textContent = firstName;
+    }
+
+    // 2. Fetch all checkins to calculate accumulated points + rank
+    const { data: allC } = await sb
+      .from('checkins')
+      .select('lapidados_score, week_number, year, created_at')
+      .eq('patient_id', D.patient_id)
+      .order('created_at', { ascending: false });
+
+    const { data: invs } = await sb
+      .from('checkin_invites')
+      .select('sent_at, week_number, year')
+      .eq('patient_id', D.patient_id);
+
+    const allCheckins = allC || [];
+    const invites     = invs  || [];
+    const nowD        = new Date();
+
+    const base = allCheckins.reduce((s, c) => s + (c.lapidados_score || 0), 0);
+    const pen  = invites.filter(inv => {
+      const d = Math.floor((nowD - new Date(inv.sent_at)) / 86400000);
+      if (d < PENALTY_DAYS) return false;
+      return !allCheckins.some(c => c.week_number === inv.week_number && c.year === inv.year);
+    }).length;
+    const totalPts = Math.max(0, base - pen * PENALTY_PTS);
+
+    if (allCheckins.length > 0 || totalPts > 0) {
+      const r = getRankCfg(totalPts);
+      const wrap = document.getElementById('welcomeRankWrap');
+      const badge = document.getElementById('welcomeRankBadge');
+      wrap.style.display = '';
+      badge.style.borderColor = r.color;
+      badge.style.background  = r.bg;
+      badge.style.color       = r.color;
+      document.getElementById('welcomeRankIcon').textContent = r.icon;
+      document.getElementById('welcomeRankName').textContent = r.name.toUpperCase();
+      document.getElementById('welcomeRankPts').textContent  = totalPts + ' pts';
+    }
+  } catch(e) {
+    // silently fail — fallback to URL name param
+    const urlName = p.get('name');
+    if (urlName) document.getElementById('pName').textContent = decodeURIComponent(urlName);
+    console.warn('fetch patient/rank error:', e);
+  }
 })();
 
 /* ── Build scale grids ──────────────────── */
@@ -1163,6 +1341,8 @@ async function submit() {
 
   const payload = {
     patient_id:       D.patient_id,
+    week_number:      D.week_number,
+    year:             D.year,
     weight:           D.weight,
     height:           D.height,
     diet_score:       D.diet_score,
@@ -1184,6 +1364,8 @@ async function submit() {
     if (error) throw error;
     goTo(7);
     setTimeout(() => animateScore(sc), 350);
+    // fetch accumulated rank after small delay so insert is visible
+    setTimeout(() => fetchAndShowRank(D.patient_id, sc.total), 1200);
   } catch (err) {
     console.error('Supabase error:', err);
     errEl.classList.add('show');
