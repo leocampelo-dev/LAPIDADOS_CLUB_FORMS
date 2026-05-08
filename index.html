@@ -503,6 +503,33 @@
     /* ─────────────────────────────── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes confettiFall{0%{opacity:1;transform:translateY(-10px)}80%{opacity:1}100%{opacity:0;transform:translateY(80px)}}
+
+    /* ── Cardio / Bowel option grid ── */
+    .cardio-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .cardio-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 10px;
+      border: 2px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+      transition: all .18s;
+      color: #fff;
+    }
+    .cardio-btn:hover { border-color: var(--o); background: rgba(232,93,4,.1); }
+    .cardio-btn.active { border-color: var(--o); background: rgba(232,93,4,.18); }
+    .cardio-icon { font-size: 22px; line-height: 1; }
+    .cardio-lbl  { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
+    .cardio-pts  { font-size: 11px; color: var(--o); font-weight: 700; }
+
     .score-screen {
       padding: 32px 0 16px;
       display: flex; flex-direction: column;
@@ -637,6 +664,39 @@
         <p class="welcome-body">
           Seu check-in semanal está aqui. Responde rápido, o Leo analisa tudo e já vai te orientar com base nos seus dados.
         </p>
+
+        <!-- RANK JOURNEY -->
+        <div style="width:100%;margin:16px 0;background:rgba(255,255,255,0.05);border-radius:14px;padding:16px 18px;text-align:left;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.5);font-weight:700;margin-bottom:12px">🗺️ Sua jornada no Lapidados Club</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.5;margin-bottom:14px">
+            Cada check-in soma pontos ao seu acumulado. Conforme você evolui, desbloqueias novos ranks — cada um representa uma mudança real no seu comportamento.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(107,114,128,.12);border-radius:9px;border:1px solid rgba(107,114,128,.2)">
+              <span style="font-size:18px;flex-shrink:0">🪨</span>
+              <div><div style="font-size:12px;font-weight:700;color:#9ca3af">BRUTO · 0–199 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Você entrou no jogo. Aprende a aparecer toda semana e não voltar ao padrão de antes.</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(59,130,246,.08);border-radius:9px;border:1px solid rgba(59,130,246,.2)">
+              <span style="font-size:18px;flex-shrink:0">🧠</span>
+              <div><div style="font-size:12px;font-weight:700;color:#60a5fa">DESTRAVADO · 200–499 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Saiu do automático. Começa a entender o que funciona no seu corpo e criar consistência.</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(124,58,237,.08);border-radius:9px;border:1px solid rgba(124,58,237,.2)">
+              <span style="font-size:18px;flex-shrink:0">⚡</span>
+              <div><div style="font-size:12px;font-weight:700;color:#a78bfa">AFIADO · 500–999 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Você não tá só tentando… você tá executando. Consistência virou parte da sua rotina.</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(249,115,22,.08);border-radius:9px;border:1px solid rgba(249,115,22,.2)">
+              <span style="font-size:18px;flex-shrink:0">🔥</span>
+              <div><div style="font-size:12px;font-weight:700;color:#fb923c">IMPARÁVEL · 1000–1999 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Controle total. Suas decisões param de oscilar e o corpo começa a responder.</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(217,119,6,.1);border-radius:9px;border:1px solid rgba(217,119,6,.3)">
+              <span style="font-size:18px;flex-shrink:0">👑</span>
+              <div><div style="font-size:12px;font-weight:700;color:#fcd34d">LAPIDADO · 2000+ pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Topo. Pouca gente sustenta o que você sustentou. Isso é comportamento, não motivação.</div></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:12px;text-align:center">
+            ⚠️ Semanas sem resposta (após link enviado) = −10pts
+          </div>
+        </div>
         <div class="chips-row">
           <div class="chip">⏱ ~2 min</div>
           <div class="chip">📊 Score ao final</div>
@@ -745,13 +805,27 @@
       </div>
 
       <div class="card">
-        <div class="card-question">Fez cardio essa semana?</div>
-        <div class="toggle-pair">
-          <button class="tog-btn tog-yes" id="tog-yes" onclick="setCardio(true)">
-            ✅ Sim, fiz
+        <div class="card-question">Fez os cardios como planejado?</div>
+        <div class="cardio-grid">
+          <button class="cardio-btn" id="cardio-full" onclick="setCardio(10,'full')">
+            <span class="cardio-icon">✅</span>
+            <span class="cardio-lbl">Sim, todos</span>
+            <span class="cardio-pts">10pts</span>
           </button>
-          <button class="tog-btn tog-no" id="tog-no" onclick="setCardio(false)">
-            ❌ Não fiz
+          <button class="cardio-btn" id="cardio-partial" onclick="setCardio(5,'partial')">
+            <span class="cardio-icon">🔄</span>
+            <span class="cardio-lbl">Sim, mas não todos</span>
+            <span class="cardio-pts">5pts</span>
+          </button>
+          <button class="cardio-btn" id="cardio-no" onclick="setCardio(0,'no')">
+            <span class="cardio-icon">❌</span>
+            <span class="cardio-lbl">Não fiz</span>
+            <span class="cardio-pts">0pts</span>
+          </button>
+          <button class="cardio-btn" id="cardio-none" onclick="setCardio(10,'none')">
+            <span class="cardio-icon">🏃</span>
+            <span class="cardio-lbl">Sem meta de cardio</span>
+            <span class="cardio-pts">10pts</span>
           </button>
         </div>
       </div>
@@ -795,6 +869,53 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
         <button class="btn-back" onclick="goTo(3)">← Voltar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         STEP 4B · SONO + INTESTINO
+    ══════════════════════════════════════ -->
+    <div class="step" id="s4b">
+      <div class="step-head">
+        <div class="step-tag">😴 Recuperação</div>
+        <h2 class="step-title">Sono e <em>intestino</em></h2>
+        <p class="step-sub">Dois indicadores que impactam diretamente sua composição e energia.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Como foi seu SONO essa semana?</div>
+        <div class="scale-labels"><span>😩 Péssimo</span><span>😴 Ótimo</span></div>
+        <div class="scale-grid" id="sg-sleep"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-question">Como foi seu intestino? Evacuação diária?</div>
+        <div class="cardio-grid">
+          <button class="cardio-btn" id="bowel-daily" onclick="setBowel(5,'daily')">
+            <span class="cardio-icon">✅</span>
+            <span class="cardio-lbl">Sim, todos os dias</span>
+            <span class="cardio-pts">5pts</span>
+          </button>
+          <button class="cardio-btn" id="bowel-most" onclick="setBowel(3,'most')">
+            <span class="cardio-icon">🔄</span>
+            <span class="cardio-lbl">Na maioria dos dias</span>
+            <span class="cardio-pts">3pts</span>
+          </button>
+          <button class="cardio-btn" id="bowel-no" onclick="setBowel(0,'no')">
+            <span class="cardio-icon">❌</span>
+            <span class="cardio-lbl">Não foi regular</span>
+            <span class="cardio-pts">0pts</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="err" id="e4b">⚠ Avalie sono e intestino para continuar.</div>
+      <div class="nav-area">
+        <button class="btn-next" onclick="v4b()">
+          Próximo
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="btn-back" onclick="goTo('4b')">← Voltar</button>
       </div>
     </div>
 
@@ -930,6 +1051,18 @@
             <span class="bd-name">Saciedade</span>
             <div class="bd-bar-wrap"><div class="bd-bar" id="bb-hunger"></div></div>
             <span class="bd-pts" id="bp-hunger">0/5</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">😴</span>
+            <span class="bd-name">Sono</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-sleep"></div></div>
+            <span class="bd-pts" id="bp-sleep">0/10</span>
+          </div>
+          <div class="bd-row">
+            <span class="bd-icon">🫁</span>
+            <span class="bd-name">Intestino</span>
+            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-bowel"></div></div>
+            <span class="bd-pts" id="bp-bowel">0/5</span
           </div>
         </div>
 
@@ -1069,9 +1202,11 @@ const D = {
   diet_score:      null,
   off_plan_meals:  0,
   training_score:  null,
-  cardio_done:     null,
+  cardio_score:    null,
   energy_level:    null,
   hunger_level:    null,
+  sleep_score:     null,
+  bowel_score:     null,
   main_difficulty: '',
   external_factors:'',
   wins:            '',
@@ -1081,12 +1216,33 @@ const D = {
   year:            null,
 };
 let cur = 0;
-const TOTAL = 6;
+const TOTAL = 7;
 
 /* ── URL params + fetch name & rank ─────────────────────── */
 (async function () {
   const p    = new URLSearchParams(window.location.search);
   D.patient_id = p.get('patient_id') || null;
+
+  // ── Duplicate check: already answered this week? ──
+  if (D.patient_id) {
+    try {
+      const nowC = new Date();
+      const jan1C = new Date(nowC.getFullYear(), 0, 1);
+      const wkC = Math.ceil(((nowC - jan1C) / 86400000 + jan1C.getDay() + 1) / 7);
+      const { data: existing } = await sb
+        .from('checkins')
+        .select('id, created_at')
+        .eq('patient_id', D.patient_id)
+        .eq('week_number', wkC)
+        .eq('year', nowC.getFullYear())
+        .limit(1);
+      if (existing && existing.length > 0) {
+        // Show already-answered screen instead of welcome
+        document.getElementById('already-done').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+      }
+    } catch(e) { console.warn('dupe check failed:', e); }
+  }
 
   // ISO week number
   const now   = new Date();
@@ -1176,6 +1332,7 @@ buildScale('sg-diet',     'diet_score');
 buildScale('sg-training', 'training_score');
 buildScale('sg-energy',   'energy_level');
 buildScale('sg-hunger',   'hunger_level');
+buildScale('sg-sleep',    'sleep_score');
 
 /* ── Stepper ────────────────────────────── */
 function stp(k, d) {
@@ -1185,17 +1342,28 @@ function stp(k, d) {
   }
 }
 
-/* ── Cardio toggle ──────────────────────── */
-function setCardio(v) {
-  D.cardio_done = v;
-  document.getElementById('tog-yes').classList.toggle('sel', v);
-  document.getElementById('tog-no').classList.toggle('sel', !v);
+/* ── Cardio 4-option ────────────────────── */
+function setCardio(pts, id) {
+  D.cardio_score = pts;
+  ['full','partial','no','none'].forEach(k => {
+    document.getElementById('cardio-'+k).classList.toggle('active', k === id);
+  });
 }
+
+/* ── Bowel options ───────────────────────── */
+function setBowel(pts, id) {
+  D.bowel_score = pts;
+  ['daily','most','no'].forEach(k => {
+    document.getElementById('bowel-'+k).classList.toggle('active', k === id);
+  });
+}
+
+/* ── Step validators ─────────────────────── */
 
 /* ── Navigation ─────────────────────────── */
 function goTo(n) {
-  document.getElementById('s' + cur).classList.remove('active');
-  document.getElementById('s' + n).classList.add('active');
+  document.getElementById('s' + String(cur)).classList.remove('active');
+  document.getElementById('s' + String(n)).classList.add('active');
   cur = n;
   updateBar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1220,8 +1388,9 @@ function updateBar() {
     lbl.textContent  = '✓ Concluído';
     return;
   }
-  bar.style.width = (cur / TOTAL * 100) + '%';
-  lbl.textContent = cur + ' / ' + TOTAL;
+  const stepNum = cur === '4b' ? 4.5 : parseInt(String(cur));
+  bar.style.width = (stepNum / TOTAL * 100) + '%';
+  lbl.textContent = (cur === '4b' ? '5' : cur) + ' / ' + TOTAL;
 }
 
 /* ── Validations ────────────────────────── */
@@ -1236,41 +1405,45 @@ function v2() {
   hide('e2'); goTo(3);
 }
 function v3() {
-  if (D.training_score === null || D.cardio_done === null) { show('e3'); return; }
+  if (D.training_score === null || D.cardio_score === null) { show('e3'); return; }
   hide('e3'); goTo(4);
 }
 function v4() {
   if (D.energy_level === null || D.hunger_level === null) { show('e4'); return; }
-  hide('e4'); goTo(5);
+  hide('e4'); goTo('4b');
 }
 function show(id) { document.getElementById(id).classList.add('show'); }
 function hide(id) { document.getElementById(id).classList.remove('show'); }
 
 /* ── Score ──────────────────────────────── */
 function calcScore() {
-  const diet    = (D.diet_score / 10) * 30;
-  const train   = (D.training_score / 10) * 25;
-  const energy  = (D.energy_level / 10) * 20;
-  const cardio  = D.cardio_done ? 10 : 0;
+  const diet    = (D.diet_score / 10) * 25;
+  const train   = (D.training_score / 10) * 20;
+  const energy  = (D.energy_level / 10) * 15;
+  const cardio  = D.cardio_score;   // 10 / 5 / 0 / 10
   const offPlan = Math.max(0, 10 - D.off_plan_meals * 2);
   const hunger  = ((10 - D.hunger_level) / 10) * 5;
+  const sleep   = (D.sleep_score / 10) * 10;
+  const bowel   = D.bowel_score;    // 5 / 3 / 0
   return {
-    total:   Math.round(diet + train + energy + cardio + offPlan + hunger),
+    total:   Math.min(100, Math.round(diet + train + energy + cardio + offPlan + hunger + sleep + bowel)),
     diet:    Math.round(diet),
     train:   Math.round(train),
     energy:  Math.round(energy),
     cardio:  cardio,
     offPlan: Math.round(offPlan),
     hunger:  Math.round(hunger),
+    sleep:   Math.round(sleep),
+    bowel:   bowel,
   };
 }
 
 function tier(s) {
-  if (s >= 90) return { name:'🔥 LAPIDADO!',    color:'#FF5C1A', msg:'Semana impecável. Você está no nível mais alto do Lapidados Club. Continuidade é tudo.' };
-  if (s >= 75) return { name:'💪 NO CAMINHO',   color:'#22c55e', msg:'Semana muito sólida. Pequenos ajustes vão te levar ao próximo nível.' };
-  if (s >= 55) return { name:'⚡ PROGREDINDO',  color:'#3b82f6', msg:'Boa base. Há espaço para crescer — reveja os pontos que pesaram mais.' };
-  if (s >= 40) return { name:'🎯 FOCO TOTAL',   color:'#f59e0b', msg:'Semana desafiadora. Identifique seu maior bloqueio e resolva primeiro.' };
-  return         { name:'🚨 ATENÇÃO TOTAL', color:'#ef4444', msg:'Semana difícil — mas o Leo já vai ajustar. Não desiste!' };
+  if (s >= 90) return { name:'✅ Semana impecável!',  color:'#FF5C1A', msg:'Você entregou o máximo essa semana. Score ' + s + '/100 — continue assim.' };
+  if (s >= 75) return { name:'💪 Semana muito sólida', color:'#22c55e', msg:'Score ' + s + '/100. Pequenos ajustes vão te levar ao próximo nível.' };
+  if (s >= 55) return { name:'⚡ Semana em progresso', color:'#3b82f6', msg:'Score ' + s + '/100. Boa base — reveja os pontos que pesaram mais.' };
+  if (s >= 40) return { name:'🎯 Semana desafiadora',  color:'#f59e0b', msg:'Score ' + s + '/100. Identifique seu maior bloqueio e resolva primeiro.' };
+  return         { name:'🚨 Semana difícil',         color:'#ef4444', msg:'Score ' + s + '/100. O Leo vai ajustar o plano. Não desiste!' };
 }
 
 /* ── Animate Score Screen ───────────────── */
@@ -1304,9 +1477,9 @@ function animateScore(sc) {
 
   // Breakdown bars
   const maxMap  = { diet:30, train:25, energy:20, cardio:10, offPlan:10, hunger:5 };
-  const barMap  = { diet:'bb-diet', train:'bb-train', energy:'bb-energy', cardio:'bb-cardio', offPlan:'bb-offplan', hunger:'bb-hunger' };
-  const ptsMap  = { diet:'bp-diet', train:'bp-train', energy:'bp-energy', cardio:'bp-cardio', offPlan:'bp-offplan', hunger:'bp-hunger' };
-  const maxLabl = { diet:30, train:25, energy:20, cardio:10, offPlan:10, hunger:5 };
+  const barMap  = { diet:'bb-diet', train:'bb-train', energy:'bb-energy', cardio:'bb-cardio', offPlan:'bb-offplan', hunger:'bb-hunger', sleep:'bb-sleep', bowel:'bb-bowel' };
+  const ptsMap  = { diet:'bp-diet', train:'bp-train', energy:'bp-energy', cardio:'bp-cardio', offPlan:'bp-offplan', hunger:'bp-hunger', sleep:'bp-sleep', bowel:'bp-bowel' };
+  const maxLabl = { diet:25, train:20, energy:15, cardio:10, offPlan:10, hunger:5, sleep:10, bowel:5 };
 
   setTimeout(() => {
     Object.keys(maxMap).forEach(k => {
@@ -1317,6 +1490,12 @@ function animateScore(sc) {
   }, 450);
 }
 
+
+/* ── v4b: sleep + bowel ─────────────────── */
+function v4b() {
+  if (D.sleep_score === null || D.bowel_score === null) { show('e4b'); return; }
+  goTo(5);
+}
 /* ── Submit ─────────────────────────────── */
 async function submit() {
   // Read text fields
@@ -1348,8 +1527,10 @@ async function submit() {
     diet_score:       D.diet_score,
     off_plan_meals:   D.off_plan_meals,
     training_score:   D.training_score,
-    cardio_done:      D.cardio_done,
+    cardio_score:     D.cardio_score,
     hunger_level:     D.hunger_level,
+    sleep_score:      D.sleep_score,
+    bowel_score:      D.bowel_score,
     energy_level:     D.energy_level,
     main_difficulty:  D.main_difficulty,
     external_factors: D.external_factors,
@@ -1375,5 +1556,17 @@ async function submit() {
   }
 }
 </script>
+
+<!-- Already answered this week -->
+<div id="already-done" style="display:none;position:fixed;inset:0;background:#0d0d0d;z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
+  <div style="font-size:56px;margin-bottom:16px">✅</div>
+  <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-.3px;margin-bottom:10px">Você já fez seu check-in!</div>
+  <div style="font-size:15px;color:rgba(255,255,255,.6);max-width:300px;line-height:1.6;margin-bottom:24px">
+    Você já respondeu o check-in desta semana. O Leo já recebeu seus dados. 🔥
+  </div>
+  <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px 20px;font-size:13px;color:rgba(255,255,255,.5)">
+    Volte na semana que vem para continuar acumulando pontos.
+  </div>
+</div>
 </body>
 </html>
