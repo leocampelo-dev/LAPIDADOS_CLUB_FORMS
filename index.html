@@ -82,6 +82,11 @@
     }
     html { scroll-behavior: smooth; }
 
+    /* ── Previne zoom por duplo toque em toda a interface ── */
+    button, input, select, textarea, a, label {
+      touch-action: manipulation;
+    }
+
     body {
       font-family: 'Barlow', sans-serif;
       background: var(--bg);
@@ -166,9 +171,18 @@
       display: block;
       animation: stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards;
     }
+    .step.leaving {
+      display: block;
+      animation: stepOut .26s cubic-bezier(.4,0,1,1) forwards;
+      pointer-events: none;
+    }
     @keyframes stepIn {
       from { opacity: 0; transform: translateX(32px); }
       to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes stepOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(-28px); }
     }
 
     /* ─── STEP HEAD ─── */
@@ -216,6 +230,12 @@
       color: var(--t3); letter-spacing: 2px;
       text-transform: uppercase;
     }
+    /* Labels de campos de texto abertos — mais visíveis */
+    .field label.label-prominent {
+      font-size: 14px; font-weight: 600;
+      color: var(--t1); letter-spacing: .2px;
+      text-transform: none;
+    }
     .input-wrap { position: relative; }
     .input-wrap input {
       padding-right: 46px;
@@ -257,26 +277,33 @@
     /* ─── SCALE BUTTONS (0–10) ─── */
     .scale-labels {
       display: flex; justify-content: space-between;
-      font-size: 10.5px; color: var(--t3);
-      margin-bottom: 9px; font-weight: 500;
+      font-size: 11.5px; color: var(--t2);
+      margin-bottom: 10px; font-weight: 600;
+      letter-spacing: .1px;
     }
+    .scale-labels span { display: flex; align-items: center; gap: 4px; }
     .scale-grid {
-      display: grid;
-      grid-template-columns: repeat(11, 1fr);
-      gap: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
     }
     .sc-btn {
-      aspect-ratio: 1;
+      flex: 1 1 auto;
+      min-width: 46px;
+      min-height: 54px;
+      max-width: 62px;
       border: 1.5px solid var(--br);
-      border-radius: 10px;
+      border-radius: 12px;
       background: var(--s3);
-      color: var(--t3);
+      color: var(--t2);
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; font-weight: 900;
+      font-size: 17px; font-weight: 900;
       cursor: pointer;
       transition: all .14s ease;
       display: flex; align-items: center; justify-content: center;
       padding: 0; line-height: 1;
+      touch-action: manipulation;
     }
     .sc-btn:active { transform: scale(.86); }
     .sc-btn.active {
@@ -528,7 +555,7 @@
     .cardio-btn.active { border-color: var(--o); background: rgba(232,93,4,.18); }
     .cardio-icon { font-size: 22px; line-height: 1; }
     .cardio-lbl  { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
-    .cardio-pts  { font-size: 11px; color: var(--o); font-weight: 700; }
+    .cardio-pts  { display: none; }
 
     .score-screen {
       padding: 32px 0 16px;
@@ -765,7 +792,7 @@
 
       <div class="card">
         <div class="card-question">Como você avalia sua dieta essa semana?</div>
-        <div class="scale-labels"><span>😓 Péssima</span><span>🔥 Perfeita</span></div>
+        <div class="scale-labels"><span>0 = 😓 Péssima</span><span>10 = 🔥 Perfeita</span></div>
         <div class="scale-grid" id="sg-diet"></div>
       </div>
 
@@ -800,7 +827,7 @@
 
       <div class="card">
         <div class="card-question">Como você avalia seu treino essa semana?</div>
-        <div class="scale-labels"><span>😴 Fraco</span><span>💪 Intenso</span></div>
+        <div class="scale-labels"><span>0 = 😴 Fraco</span><span>10 = 💪 Intenso</span></div>
         <div class="scale-grid" id="sg-training"></div>
       </div>
 
@@ -852,13 +879,13 @@
 
       <div class="card">
         <div class="card-question">Nível de energia geral na semana</div>
-        <div class="scale-labels"><span>😴 No chão</span><span>⚡ No máximo</span></div>
+        <div class="scale-labels"><span>0 = 😴 No chão</span><span>10 = ⚡ No máximo</span></div>
         <div class="scale-grid" id="sg-energy"></div>
       </div>
 
       <div class="card">
         <div class="card-question">Nível de fome que sentiu</div>
-        <div class="scale-labels"><span>😌 Saciado</span><span>🤤 Com muita fome</span></div>
+        <div class="scale-labels"><span>0 = 😌 Saciado</span><span>10 = 🤤 Com muita fome</span></div>
         <div class="scale-grid" id="sg-hunger"></div>
       </div>
 
@@ -884,7 +911,7 @@
 
       <div class="card">
         <div class="card-question">Como foi seu SONO essa semana?</div>
-        <div class="scale-labels"><span>😩 Péssimo</span><span>😴 Ótimo</span></div>
+        <div class="scale-labels"><span>0 = 😩 Péssimo</span><span>10 = 😴 Ótimo</span></div>
         <div class="scale-grid" id="sg-sleep"></div>
       </div>
 
@@ -931,14 +958,14 @@
 
       <div class="card">
         <div class="field">
-          <label>Maior dificuldade da semana</label>
+          <label class="label-prominent">Maior dificuldade da semana</label>
           <textarea id="f-difficulty" placeholder="Ex: Perdi motivação para treinar na quarta, tive uma saída social no final de semana e escapuliu…"></textarea>
         </div>
       </div>
 
       <div class="card">
         <div class="field">
-          <label>Fatores externos que afetaram</label>
+          <label class="label-prominent">Fatores externos que afetaram</label>
           <textarea id="f-external" placeholder="Ex: Semana muito estressante no trabalho, noite de sono ruim, viagem de negócios…"></textarea>
         </div>
       </div>
@@ -964,21 +991,21 @@
 
       <div class="card">
         <div class="field">
-          <label>Vitórias da semana</label>
+          <label class="label-prominent">Vitórias da semana</label>
           <textarea id="f-wins" placeholder="Ex: Segui o plano de segunda a sexta sem escorregar, bati minha meta de proteína todos os dias…"></textarea>
         </div>
       </div>
 
       <div class="card">
         <div class="field">
-          <label>O que pode melhorar?</label>
+          <label class="label-prominent">O que pode melhorar?</label>
           <textarea id="f-improvements" placeholder="Ex: Preciso melhorar o sono, tomar mais água, ser mais consistente nos treinos de fim de semana…"></textarea>
         </div>
       </div>
 
       <div class="card" style="border-color:var(--br2);background:rgba(255,92,26,.04)">
         <div class="field">
-          <label>🙋 Precisa de ajuda do Leo?</label>
+          <label class="label-prominent">🙋 Precisa de ajuda do Leo?</label>
           <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que…"></textarea>
         </div>
       </div>
@@ -1362,11 +1389,19 @@ function setBowel(pts, id) {
 
 /* ── Navigation ─────────────────────────── */
 function goTo(n) {
-  document.getElementById('s' + String(cur)).classList.remove('active');
-  document.getElementById('s' + String(n)).classList.add('active');
-  cur = n;
-  updateBar();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const oldEl = document.getElementById('s' + String(cur));
+  const newEl = document.getElementById('s' + String(n));
+
+  oldEl.classList.remove('active');
+  oldEl.classList.add('leaving');
+
+  setTimeout(() => {
+    oldEl.classList.remove('leaving');
+    newEl.classList.add('active');
+    cur = n;
+    updateBar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 240);
 }
 
 function updateBar() {
