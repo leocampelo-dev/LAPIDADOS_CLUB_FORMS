@@ -82,11 +82,6 @@
     }
     html { scroll-behavior: smooth; }
 
-    /* ── Previne zoom por duplo toque em toda a interface ── */
-    button, input, select, textarea, a, label {
-      touch-action: manipulation;
-    }
-
     body {
       font-family: 'Barlow', sans-serif;
       background: var(--bg);
@@ -171,18 +166,9 @@
       display: block;
       animation: stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards;
     }
-    .step.leaving {
-      display: block;
-      animation: stepOut .26s cubic-bezier(.4,0,1,1) forwards;
-      pointer-events: none;
-    }
     @keyframes stepIn {
       from { opacity: 0; transform: translateX(32px); }
       to   { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes stepOut {
-      from { opacity: 1; transform: translateX(0); }
-      to   { opacity: 0; transform: translateX(-28px); }
     }
 
     /* ─── STEP HEAD ─── */
@@ -230,12 +216,6 @@
       color: var(--t3); letter-spacing: 2px;
       text-transform: uppercase;
     }
-    /* Labels de campos de texto abertos — mais visíveis */
-    .field label.label-prominent {
-      font-size: 14px; font-weight: 600;
-      color: var(--t1); letter-spacing: .2px;
-      text-transform: none;
-    }
     .input-wrap { position: relative; }
     .input-wrap input {
       padding-right: 46px;
@@ -277,33 +257,26 @@
     /* ─── SCALE BUTTONS (0–10) ─── */
     .scale-labels {
       display: flex; justify-content: space-between;
-      font-size: 11.5px; color: var(--t2);
-      margin-bottom: 10px; font-weight: 600;
-      letter-spacing: .1px;
+      font-size: 10.5px; color: var(--t3);
+      margin-bottom: 9px; font-weight: 500;
     }
-    .scale-labels span { display: flex; align-items: center; gap: 4px; }
     .scale-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(11, 1fr);
+      gap: 4px;
     }
     .sc-btn {
-      flex: 1 1 auto;
-      min-width: 46px;
-      min-height: 54px;
-      max-width: 62px;
+      aspect-ratio: 1;
       border: 1.5px solid var(--br);
-      border-radius: 12px;
+      border-radius: 10px;
       background: var(--s3);
-      color: var(--t2);
+      color: var(--t3);
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 17px; font-weight: 900;
+      font-size: 13px; font-weight: 900;
       cursor: pointer;
       transition: all .14s ease;
       display: flex; align-items: center; justify-content: center;
       padding: 0; line-height: 1;
-      touch-action: manipulation;
     }
     .sc-btn:active { transform: scale(.86); }
     .sc-btn.active {
@@ -555,7 +528,7 @@
     .cardio-btn.active { border-color: var(--o); background: rgba(232,93,4,.18); }
     .cardio-icon { font-size: 22px; line-height: 1; }
     .cardio-lbl  { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
-    .cardio-pts  { display: none; }
+    .cardio-pts  { font-size: 11px; color: var(--o); font-weight: 700; }
 
     .score-screen {
       padding: 32px 0 16px;
@@ -792,7 +765,7 @@
 
       <div class="card">
         <div class="card-question">Como você avalia sua dieta essa semana?</div>
-        <div class="scale-labels"><span>0 = 😓 Péssima</span><span>10 = 🔥 Perfeita</span></div>
+        <div class="scale-labels"><span>😓 Péssima</span><span>🔥 Perfeita</span></div>
         <div class="scale-grid" id="sg-diet"></div>
       </div>
 
@@ -827,7 +800,7 @@
 
       <div class="card">
         <div class="card-question">Como você avalia seu treino essa semana?</div>
-        <div class="scale-labels"><span>0 = 😴 Fraco</span><span>10 = 💪 Intenso</span></div>
+        <div class="scale-labels"><span>😴 Fraco</span><span>💪 Intenso</span></div>
         <div class="scale-grid" id="sg-training"></div>
       </div>
 
@@ -879,13 +852,13 @@
 
       <div class="card">
         <div class="card-question">Nível de energia geral na semana</div>
-        <div class="scale-labels"><span>0 = 😴 No chão</span><span>10 = ⚡ No máximo</span></div>
+        <div class="scale-labels"><span>😴 No chão</span><span>⚡ No máximo</span></div>
         <div class="scale-grid" id="sg-energy"></div>
       </div>
 
       <div class="card">
         <div class="card-question">Nível de fome que sentiu</div>
-        <div class="scale-labels"><span>0 = 😌 Saciado</span><span>10 = 🤤 Com muita fome</span></div>
+        <div class="scale-labels"><span>😌 Saciado</span><span>🤤 Com muita fome</span></div>
         <div class="scale-grid" id="sg-hunger"></div>
       </div>
 
@@ -911,7 +884,7 @@
 
       <div class="card">
         <div class="card-question">Como foi seu SONO essa semana?</div>
-        <div class="scale-labels"><span>0 = 😩 Péssimo</span><span>10 = 😴 Ótimo</span></div>
+        <div class="scale-labels"><span>😩 Péssimo</span><span>😴 Ótimo</span></div>
         <div class="scale-grid" id="sg-sleep"></div>
       </div>
 
@@ -958,14 +931,14 @@
 
       <div class="card">
         <div class="field">
-          <label class="label-prominent">Maior dificuldade da semana</label>
+          <label>Maior dificuldade da semana</label>
           <textarea id="f-difficulty" placeholder="Ex: Perdi motivação para treinar na quarta, tive uma saída social no final de semana e escapuliu…"></textarea>
         </div>
       </div>
 
       <div class="card">
         <div class="field">
-          <label class="label-prominent">Fatores externos que afetaram</label>
+          <label>Fatores externos que afetaram</label>
           <textarea id="f-external" placeholder="Ex: Semana muito estressante no trabalho, noite de sono ruim, viagem de negócios…"></textarea>
         </div>
       </div>
@@ -991,21 +964,21 @@
 
       <div class="card">
         <div class="field">
-          <label class="label-prominent">Vitórias da semana</label>
+          <label>Vitórias da semana</label>
           <textarea id="f-wins" placeholder="Ex: Segui o plano de segunda a sexta sem escorregar, bati minha meta de proteína todos os dias…"></textarea>
         </div>
       </div>
 
       <div class="card">
         <div class="field">
-          <label class="label-prominent">O que pode melhorar?</label>
+          <label>O que pode melhorar?</label>
           <textarea id="f-improvements" placeholder="Ex: Preciso melhorar o sono, tomar mais água, ser mais consistente nos treinos de fim de semana…"></textarea>
         </div>
       </div>
 
       <div class="card" style="border-color:var(--br2);background:rgba(255,92,26,.04)">
         <div class="field">
-          <label class="label-prominent">🙋 Precisa de ajuda do Leo?</label>
+          <label>🙋 Precisa de ajuda do Leo?</label>
           <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que…"></textarea>
         </div>
       </div>
@@ -1254,14 +1227,29 @@ const TOTAL = 7;
   if (D.patient_id) {
     try {
       const nowC = new Date();
-      const jan1C = new Date(nowC.getFullYear(), 0, 1);
-      const wkC = Math.ceil(((nowC - jan1C) / 86400000 + jan1C.getDay() + 1) / 7);
+      // Get start_date for relative week calc
+      const { data: patForWeek } = await sb
+        .from('patients')
+        .select('start_date')
+        .eq('id', D.patient_id)
+        .single();
+      let wkNum, wkYr;
+      if (patForWeek?.start_date) {
+        const st = new Date(patForWeek.start_date + 'T00:00:00');
+        const dd = Math.floor((nowC - st) / 86400000);
+        wkNum = Math.max(1, Math.ceil((dd + 1) / 7));
+        wkYr  = st.getFullYear();
+      } else {
+        const jan1C = new Date(nowC.getFullYear(), 0, 1);
+        wkNum = Math.ceil(((nowC - jan1C) / 86400000 + jan1C.getDay() + 1) / 7);
+        wkYr  = nowC.getFullYear();
+      }
       const { data: existing } = await sb
         .from('checkins')
         .select('id, created_at')
         .eq('patient_id', D.patient_id)
-        .eq('week_number', wkC)
-        .eq('year', nowC.getFullYear())
+        .eq('week_number', wkNum)
+        .eq('year', wkYr)
         .limit(1);
       if (existing && existing.length > 0) {
         // Show already-answered screen instead of welcome
@@ -1271,21 +1259,19 @@ const TOTAL = 7;
     } catch(e) { console.warn('dupe check failed:', e); }
   }
 
-  // ISO week number
-  const now   = new Date();
-  const jan1  = new Date(now.getFullYear(), 0, 1);
-  const week  = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
-  D.week_number = week;
-  D.year = now.getFullYear();
-  document.getElementById('weekNum').textContent = week;
+  // Patient-relative week (from start_date, every 7 days = +1 week)
+  // Fetched below after getting patient data; fallback to ISO week
+  const now = new Date();
+  let week, weekYear;
+  // Will be set after fetching patient start_date below
 
   if (!D.patient_id) return;
 
   try {
-    // 1. Fetch patient name from DB
+    // 1. Fetch patient name + start_date from DB
     const { data: pat } = await sb
       .from('patients')
-      .select('name')
+      .select('name, start_date')
       .eq('id', D.patient_id)
       .single();
 
@@ -1293,6 +1279,22 @@ const TOTAL = 7;
     if (firstName) {
       document.getElementById('pName').textContent = firstName;
     }
+
+    // Calculate patient-relative week from start_date
+    if (pat?.start_date) {
+      const start = new Date(pat.start_date + 'T00:00:00');
+      const daysDiff = Math.floor((now - start) / 86400000);
+      week = Math.max(1, Math.ceil((daysDiff + 1) / 7));
+      weekYear = start.getFullYear();
+    } else {
+      // Fallback to ISO week
+      const jan1 = new Date(now.getFullYear(), 0, 1);
+      week = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      weekYear = now.getFullYear();
+    }
+    D.week_number = week;
+    D.year = weekYear;
+    document.getElementById('weekNum').textContent = week;
 
     // 2. Fetch all checkins to calculate accumulated points + rank
     const { data: allC } = await sb
@@ -1389,19 +1391,11 @@ function setBowel(pts, id) {
 
 /* ── Navigation ─────────────────────────── */
 function goTo(n) {
-  const oldEl = document.getElementById('s' + String(cur));
-  const newEl = document.getElementById('s' + String(n));
-
-  oldEl.classList.remove('active');
-  oldEl.classList.add('leaving');
-
-  setTimeout(() => {
-    oldEl.classList.remove('leaving');
-    newEl.classList.add('active');
-    cur = n;
-    updateBar();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, 240);
+  document.getElementById('s' + String(cur)).classList.remove('active');
+  document.getElementById('s' + String(n)).classList.add('active');
+  cur = n;
+  updateBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updateBar() {
