@@ -883,7 +883,8 @@ const BOWEL_LBL  = { 5:'Regular',   3:'Irregular', 0:'Ruim'  };
    ════════════════════════════════════════════════ */
 let   sb     = null;
 const params = new URLSearchParams(location.search);
-const PID    = params.get('pid') || params.get('patient_id');
+const PID      = params.get('pid') || params.get('patient_id');
+const URL_NAME = params.get('name'); // fallback: ?name=Lucas
 
 function initSB() {
   if (!SUPABASE_URL.startsWith('https://') || SUPABASE_KEY === 'YOUR_SUPABASE_ANON_KEY') return false;
@@ -925,17 +926,26 @@ let cur = 0;
    INIT
    ════════════════════════════════════════════════ */
 async function init() {
-  if (!initSB()) {
-    // Sem credenciais válidas → renderiza painel de demonstração
-    renderDashboard(); return;
-  }
-  if (!PID) { renderDashboard(); return; }
+  // Nome via URL param aplicado imediatamente (sem esperar banco)
+  if (URL_NAME) ST.name = URL_NAME.split(' ')[0];
+
+  if (!initSB()) { renderDashboard(); return; }
+  if (!PID)      { renderDashboard(); return; }
   try {
-    // Name lookup (graceful)
-    try {
-      const { data:pt } = await sb.from('patients').select('name').eq('id',PID).single();
-      if (pt?.name) ST.name = pt.name.split(' ')[0];
-    } catch(_) {}
+    // Busca nome na tabela patients (com fallback para colunas comuns)
+    if (!URL_NAME) {
+      try {
+        const { data:pt } = await sb
+          .from('patients')
+          .select('name, full_name, first_name, nome')
+          .eq('id', PID)
+          .maybeSingle();
+        if (pt) {
+          const n = pt.name || pt.full_name || pt.first_name || pt.nome;
+          if (n) ST.name = n.split(' ')[0];
+        }
+      } catch(_) {}
+    }
 
     const { data:history } = await sb
       .from('checkins').select('*').eq('patient_id',PID)
