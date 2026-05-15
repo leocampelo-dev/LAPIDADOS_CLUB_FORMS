@@ -691,7 +691,6 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
     <div class="card-q">🥊 Precisa de ajuda do Leo?</div>
     <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que..."></textarea>
   </div>
-  <div class="err" id="e-submit" style="display:none"></div>
   <div class="nav">
     <button class="btn-nx" onclick="goTo(6)">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
     <button class="btn-bk" onclick="goTo(5)">← Voltar</button>
@@ -819,9 +818,9 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
 /* ════════════════════════════════════════════════
    🔑 CREDENCIAIS
    ════════════════════════════════════════════════ */
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
-const GEMINI_KEY   = 'YOUR_GEMINI_API_KEY';
+const SUPABASE_URL = 'https://guxsfjfqywebglymasao.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_NAm0P6HDQvJ0jODRJEdZ5A_2zg9BSDw';
+const GEMINI_KEY   = 'AIzaSyCEbnynkNqkwe3wL4xSqBrv_4zLhIS8hOs';
 // Obter chave gratuita → https://aistudio.google.com/app/apikey
 
 /* ════════════════════════════════════════════════
@@ -1517,43 +1516,74 @@ function tier(s) {
    SUBMIT
    ════════════════════════════════════════════════ */
 async function submit() {
-  if (!sb) { document.getElementById('e-submit').classList.add('show'); return; }
+  const btn   = document.getElementById('btn-send');
+  const txt   = document.getElementById('send-txt');
+  const load  = document.getElementById('send-load');
+  const errEl = document.getElementById('e-submit');
+
+  // Sem conexão com Supabase — credenciais não configuradas
+  if (!sb) {
+    errEl.textContent = '⚠ Credenciais do Supabase não configuradas no arquivo.';
+    errEl.classList.add('show');
+    console.error('Supabase não inicializado. Verifique SUPABASE_URL e SUPABASE_KEY no arquivo.');
+    return;
+  }
+
+  // Coletar textos das reflexões
   D.main_difficulty  = document.getElementById('f-difficulty').value.trim();
   D.external_factors = document.getElementById('f-external').value.trim();
   D.wins             = document.getElementById('f-wins').value.trim();
   D.improvements     = document.getElementById('f-improvements').value.trim();
   D.needs_help       = document.getElementById('f-help').value.trim();
 
-  const btn  = document.getElementById('btn-send');
-  const txt  = document.getElementById('send-txt');
-  const load = document.getElementById('send-load');
-  const errEl= document.getElementById('e-submit');
-
   const sc = calcScore();
   NEW_SCORE = sc;
 
-  btn.disabled = true; txt.style.display='none'; load.style.display='flex';
+  btn.disabled = true;
+  txt.style.display  = 'none';
+  load.style.display = 'flex';
   errEl.classList.remove('show');
 
+  const payload = {
+    patient_id:       D.patient_id,
+    week_number:      D.week_number,
+    year:             D.year,
+    weight:           D.weight,
+    height:           D.height,
+    diet_score:       D.diet_score,
+    off_plan_meals:   D.off_plan_meals,
+    training_score:   D.training_score,
+    cardio_score:     D.cardio_score,
+    hunger_level:     D.hunger_level,
+    energy_level:     D.energy_level,
+    sleep_score:      D.sleep_score,
+    bowel_score:      D.bowel_score,
+    main_difficulty:  D.main_difficulty,
+    external_factors: D.external_factors,
+    wins:             D.wins,
+    improvements:     D.improvements,
+    needs_help:       D.needs_help,
+    lapidados_score:  sc.total,
+  };
+
+  console.log('Enviando payload:', payload);
+
   try {
-    const { error } = await sb.from('checkins').insert({
-      patient_id:D.patient_id, week_number:D.week_number, year:D.year,
-      weight:D.weight, height:D.height,
-      diet_score:D.diet_score, off_plan_meals:D.off_plan_meals,
-      training_score:D.training_score, cardio_score:D.cardio_score,
-      hunger_level:D.hunger_level, energy_level:D.energy_level,
-      sleep_score:D.sleep_score, bowel_score:D.bowel_score,
-      main_difficulty:D.main_difficulty, external_factors:D.external_factors,
-      wins:D.wins, improvements:D.improvements, needs_help:D.needs_help,
-      lapidados_score:sc.total,
-    });
-    if (error) throw error;
+    const { data, error } = await sb.from('checkins').insert(payload).select();
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+    console.log('Check-in salvo com sucesso:', data);
     goTo(7);
-    setTimeout(()=>animateScore(sc), 350);
+    setTimeout(() => animateScore(sc), 350);
   } catch(err) {
-    console.error(err);
+    console.error('Erro no submit:', err);
+    errEl.textContent = '⚠ Erro ao enviar: ' + (err.message || 'verifique sua conexão.');
     errEl.classList.add('show');
-    btn.disabled=false; txt.style.display=''; load.style.display='none';
+    btn.disabled = false;
+    txt.style.display  = '';
+    load.style.display = 'none';
   }
 }
 
