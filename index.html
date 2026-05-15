@@ -381,11 +381,22 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
 .sp{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Review */
-.rv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.rv-item{background:var(--s3);border:1px solid var(--br);border-radius:12px;padding:12px}
-.rv-label{font-size:9px;color:var(--t3);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
-.rv-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--t1)}
+/* ─── REVIEW NOVO ────────────────────────── */
+.rv-group{background:var(--glass);border:1px solid var(--br);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.rv-gtitle{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--o);margin-bottom:10px}
+.rv-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.rv-row:last-child{border-bottom:none}
+.rv-rl{font-size:13px;color:var(--t2);font-weight:400}
+.rv-rv{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;letter-spacing:.5px;text-align:right;flex-shrink:0;margin-left:12px}
+.rv-preview{
+  background:linear-gradient(135deg,rgba(255,92,26,.1),rgba(255,61,0,.04));
+  border:1px solid var(--br2);border-radius:16px;
+  padding:16px 18px;display:flex;align-items:center;
+  justify-content:space-between;margin-bottom:14px;
+}
+.rv-preview-lbl{font-size:11px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:1.5px;line-height:1.5}
+.rv-preview-num{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;line-height:1}
+.rv-preview-num span{font-size:14px;color:var(--t3);font-weight:400}
 
 /* ─── SCORE REVEAL ───────────────────────── */
 .score-screen{padding:28px 0 16px;display:flex;flex-direction:column;align-items:center;text-align:center}
@@ -1392,25 +1403,75 @@ function v4b(){ if(D.sleep_score===null||D.bowel_score===null){se('e4b');return;
    REVIEW
    ════════════════════════════════════════════════ */
 function buildReview() {
-  const CARDIO_LBL_R = { 10:'Completo', 5:'Parcial', 0:'Não fiz' };
-  const BOWEL_LBL_R  = { 5:'Regular', 3:'Na maioria', 0:'Irregular' };
-  const items = [
-    { l:'Peso',      v: D.weight + ' kg' },
-    { l:'Altura',    v: D.height + ' cm' },
-    { l:'Dieta',     v: D.diet_score + '/10' },
-    { l:'Off-plan',  v: D.off_plan_meals + ' ref.' },
-    { l:'Treino',    v: D.training_score + '/10' },
-    { l:'Cardio',    v: CARDIO_LBL_R[D.cardio_score] || D.cardio_score + ' pts' },
-    { l:'Energia',   v: D.energy_level + '/10' },
-    { l:'Fome',      v: D.hunger_level + '/10' },
-    { l:'Sono',      v: (D.sleep_score || 0) + '/10' },
-    { l:'Intestino', v: BOWEL_LBL_R[D.bowel_score] || D.bowel_score + ' pts' },
+  const sc = calcScore();
+  const t  = tier(sc.total);
+
+  // Cor por nota 0-10
+  const nc = v => v >= 8 ? 'var(--green)' : v >= 5 ? 'var(--o)' : 'var(--red)';
+  // Cor por pontos diretos
+  const pc = v => v >= 8 ? 'var(--green)' : v >= 5 ? 'var(--o)' : v > 0 ? 'var(--amber)' : 'var(--red)';
+
+  const CARDIO_L = { 10:'Completo', 5:'Parcial', 0:'Não fiz' };
+  const BOWEL_L  = { 5:'Regular', 3:'Na maioria', 0:'Irregular' };
+  const bowelC   = { 5:'var(--green)', 3:'var(--amber)', 0:'var(--red)' };
+  const cardioC  = { 10:'var(--green)', 5:'var(--amber)', 0:'var(--red)' };
+  const offC     = D.off_plan_meals <= 1 ? 'var(--green)' : D.off_plan_meals <= 3 ? 'var(--amber)' : 'var(--red)';
+
+  const groups = [
+    {
+      icon:'📏', title:'Corpo',
+      rows:[
+        { l:'Peso atual',        v: D.weight + ' kg',             c:'var(--t1)' },
+        { l:'Altura',            v: D.height + ' cm',             c:'var(--t1)' },
+      ]
+    },
+    {
+      icon:'🥗', title:'Alimentação',
+      rows:[
+        { l:'Nota da dieta',          v: D.diet_score + '/10',              c: nc(D.diet_score) },
+        { l:'Refeições fora do plano', v: D.off_plan_meals + ' refeição(ões)', c: offC },
+      ]
+    },
+    {
+      icon:'🏋️', title:'Treino & Movimento',
+      rows:[
+        { l:'Qualidade do treino', v: D.training_score + '/10',           c: nc(D.training_score) },
+        { l:'Cardio',              v: CARDIO_L[D.cardio_score] || '—',    c: cardioC[D.cardio_score] || 'var(--t1)' },
+      ]
+    },
+    {
+      icon:'⚡', title:'Energia & Fome',
+      rows:[
+        { l:'Nível de energia', v: D.energy_level + '/10', c: nc(D.energy_level) },
+        { l:'Nível de fome',    v: D.hunger_level + '/10', c: 'var(--t1)' },
+      ]
+    },
+    {
+      icon:'🌙', title:'Recuperação',
+      rows:[
+        { l:'Qualidade do sono', v: (D.sleep_score||0) + '/10',            c: nc(D.sleep_score||0) },
+        { l:'Intestino',         v: BOWEL_L[D.bowel_score] || '—',         c: bowelC[D.bowel_score] || 'var(--t1)' },
+      ]
+    },
   ];
-  document.getElementById('rv-grid').innerHTML = items.map(it => `
-    <div class="rv-item">
-      <div class="rv-label">${it.l}</div>
-      <div class="rv-val">${it.v}</div>
+
+  const groupsHTML = groups.map(g => `
+    <div class="rv-group">
+      <div class="rv-gtitle">${g.icon} &nbsp;${g.title}</div>
+      ${g.rows.map(r => `
+        <div class="rv-row">
+          <div class="rv-rl">${r.l}</div>
+          <div class="rv-rv" style="color:${r.c}">${r.v}</div>
+        </div>`).join('')}
     </div>`).join('');
+
+  const previewHTML = `
+    <div class="rv-preview">
+      <div class="rv-preview-lbl">Score<br>estimado</div>
+      <div class="rv-preview-num" style="color:${t.color}">${sc.total}<span> /100</span></div>
+    </div>`;
+
+  document.getElementById('rv-grid').innerHTML = previewHTML + groupsHTML;
 }
 
 /* ════════════════════════════════════════════════
