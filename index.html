@@ -1,1601 +1,1593 @@
 <!DOCTYPE html>
-<!--
-╔══════════════════════════════════════════════════════╗
-║    LAPIDADOS CLUB — CHECK-IN SEMANAL v1.0            ║
-║    Conectado ao Supabase do Lapidados Control        ║
-╠══════════════════════════════════════════════════════╣
-║  SQL — Rodar no Supabase SQL Editor ANTES de usar:   ║
-║                                                      ║
-║  CREATE TABLE IF NOT EXISTS checkins (               ║
-║    id              uuid DEFAULT                      ║
-║                    gen_random_uuid() PRIMARY KEY,    ║
-║    patient_id      uuid NOT NULL,                    ║
-║    weight          numeric(5,2),                     ║
-║    height          numeric(5,2),                     ║
-║    diet_score      int CHECK                         ║
-║                    (diet_score BETWEEN 0 AND 10),    ║
-║    off_plan_meals  int DEFAULT 0,                    ║
-║    training_score  int CHECK                         ║
-║                    (training_score BETWEEN 0 AND 10),║
-║    cardio_done     boolean DEFAULT false,            ║
-║    hunger_level    int CHECK                         ║
-║                    (hunger_level BETWEEN 0 AND 10),  ║
-║    energy_level    int CHECK                         ║
-║                    (energy_level BETWEEN 0 AND 10),  ║
-║    main_difficulty text,                             ║
-║    external_factors text,                            ║
-║    wins            text,                             ║
-║    improvements    text,                             ║
-║    needs_help      text,                             ║
-║    lapidados_score int,                              ║
-║    created_at      timestamptz DEFAULT now()         ║
-║  );                                                  ║
-║                                                      ║
-║  ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;     ║
-║                                                      ║
-║  -- Formulário público pode inserir                  ║
-║  CREATE POLICY "checkins_anon_insert"                ║
-║    ON checkins FOR INSERT WITH CHECK (true);         ║
-║                                                      ║
-║  -- Leitura apenas para autenticados (nutricionista) ║
-║  CREATE POLICY "checkins_auth_select"                ║
-║    ON checkins FOR SELECT                            ║
-║    USING (auth.role() = 'authenticated');            ║
-║                                                      ║
-║  🔑 Substituir credenciais na linha ~75              ║
-╚══════════════════════════════════════════════════════╝
--->
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
-  <meta name="theme-color" content="#080808"/>
-  <meta name="description" content="Check-in semanal do Lapidados Club"/>
-  <title>Check-in Semanal · Lapidados Club</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <style>
-    /* ─── TOKENS ─── */
-    :root {
-      --o:    #FF5C1A;
-      --o2:   #FF3D00;
-      --og:   rgba(255,92,26,.18);
-      --og2:  rgba(255,92,26,.08);
-      --bg:   #080808;
-      --s1:   #111111;
-      --s2:   #191919;
-      --s3:   #222222;
-      --br:   rgba(255,255,255,.07);
-      --br2:  rgba(255,92,26,.25);
-      --t1:   #F2F2F2;
-      --t2:   #999;
-      --t3:   #555;
-      --green:#22c55e;
-    }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#060606"/>
+<title>Lapidados Club · Evolução Semanal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ─── TOKENS ─────────────────────────────── */
+:root{
+  --o:#FF5C1A;--o2:#FF3D00;
+  --og:rgba(255,92,26,.18);--og2:rgba(255,92,26,.07);--og3:rgba(255,92,26,.12);
+  --bg:#060606;--s1:#0d0d0d;--s2:#131313;--s3:#1a1a1a;--s4:#222;
+  --glass:rgba(255,255,255,.032);--glass2:rgba(255,255,255,.055);
+  --br:rgba(255,255,255,.07);--br2:rgba(255,92,26,.25);
+  --t1:#F0F0F0;--t2:#888;--t3:#444;
+  --green:#22c55e;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444;--purple:#a78bfa;
+  --rank-color:var(--o);--rank-glow:rgba(255,92,26,.25);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Barlow',sans-serif;background:var(--bg);color:var(--t1);
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,92,26,.12) 0%,transparent 60%),
+    radial-gradient(ellipse 45% 35% at 88% 80%,rgba(255,61,0,.07) 0%,transparent 55%),
+    radial-gradient(ellipse 30% 25% at 12% 55%,rgba(255,92,26,.04) 0%,transparent 50%);
+  pointer-events:none;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+}
+.app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
 
-    /* ─── RESET ─── */
-    *, *::before, *::after {
-      margin: 0; padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    html { scroll-behavior: smooth; }
+/* ─── TOPBAR ─────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:rgba(6,6,6,.92);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--br);
+  padding:13px 20px 11px;
+}
+.topbar-inner{max-width:480px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.topbar-logo{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;color:var(--o);
+}
+.topbar-logo span{color:var(--t3)}
+.step-counter{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.5px;font-family:'Barlow Condensed',sans-serif}
 
-    body {
-      font-family: 'Barlow', sans-serif;
-      background: var(--bg);
-      color: var(--t1);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+/* ─── PROGRESS ───────────────────────────── */
+.progress-track{height:2px;background:var(--s3)}
+.progress-fill{
+  height:100%;background:linear-gradient(90deg,var(--o),var(--o2));
+  transition:width .55s cubic-bezier(.4,0,.2,1);border-radius:0 2px 2px 0;width:0%
+}
 
-    /* BG atmosphere */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 75% 45% at 50% 0%, rgba(255,92,26,.13) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 90% 90%, rgba(255,61,0,.07) 0%, transparent 55%);
-      pointer-events: none;
-    }
-    body::after {
-      content: '';
-      position: fixed; inset: 0; z-index: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-    }
+/* ─── MAIN ───────────────────────────────── */
+.main{flex:1;max-width:480px;width:100%;margin:0 auto;padding:0 18px 80px}
 
-    /* ─── APP SHELL ─── */
-    .app {
-      position: relative; z-index: 1;
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-    }
+/* ─── STEPS ──────────────────────────────── */
+.step{display:none}
+.step.active{display:block;animation:stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards}
+@keyframes stepIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
 
-    /* ─── TOP BAR ─── */
-    .topbar {
-      position: sticky; top: 0; z-index: 20;
-      background: rgba(8,8,8,.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--br);
-      padding: 13px 20px 11px;
-    }
-    .topbar-inner {
-      max-width: 480px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .topbar-logo {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 15px; font-weight: 900;
-      letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--o);
-    }
-    .topbar-logo span { color: var(--t3); }
-    .step-counter {
-      font-size: 11.5px; font-weight: 600;
-      color: var(--t3); letter-spacing: .5px;
-      font-family: 'Barlow Condensed', sans-serif;
-    }
+/* ─── SKELETON ───────────────────────────── */
+.skeleton{
+  background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);
+  background-size:200% 100%;animation:shimmer 1.6s infinite;border-radius:10px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-line{height:13px;border-radius:7px;margin-bottom:8px}
+.sk-block{border-radius:16px}
 
-    /* ─── PROGRESS BAR ─── */
-    .progress-track {
-      height: 3px; background: var(--s3);
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--o), var(--o2));
-      transition: width .55s cubic-bezier(.4,0,.2,1);
-      border-radius: 0 2px 2px 0;
-      width: 0%;
-    }
+/* ─── GLASS CARD ─────────────────────────── */
+.gc{
+  background:var(--glass);border:1px solid var(--br);border-radius:18px;
+  padding:18px 16px;margin-bottom:12px;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
 
-    /* ─── MAIN CONTENT ─── */
-    .main {
-      flex: 1;
-      max-width: 480px; width: 100%;
-      margin: 0 auto;
-      padding: 0 20px 56px;
-    }
+/* ─── HERO ───────────────────────────────── */
+.hero{padding:28px 0 8px}
+.hero-pre{
+  font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;
+  letter-spacing:3px;text-transform:uppercase;color:var(--o);margin-bottom:6px;
+}
+.hero-title{
+  font-family:'Barlow Condensed',sans-serif;font-size:33px;font-weight:900;
+  line-height:1.05;text-transform:uppercase;color:var(--t1);margin-bottom:20px;
+}
+.hero-title em{font-style:normal;color:var(--o)}
 
-    /* ─── STEP SYSTEM ─── */
-    .step { display: none; }
-    .step.active {
-      display: block;
-      animation: stepIn .38s cubic-bezier(.25,.46,.45,.94) forwards;
-    }
-    @keyframes stepIn {
-      from { opacity: 0; transform: translateX(32px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
+/* Rank hero block */
+.rank-hero{
+  background:var(--glass);border:1px solid var(--br);border-radius:20px;
+  padding:20px 18px;margin-bottom:12px;position:relative;overflow:hidden;
+}
+.rank-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 65% 65% at 90% 50%,var(--rank-glow) 0%,transparent 70%);
+  pointer-events:none;
+}
+.rank-badge-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.rank-icon{font-size:30px;line-height:1}
+.rank-info{flex:1}
+.rank-name{
+  font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;color:var(--rank-color);line-height:1;
+}
+.rank-sub{font-size:10.5px;color:var(--t3);font-weight:500;margin-top:3px;letter-spacing:.5px}
+.rank-pts-main{
+  font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;
+  color:var(--t1);letter-spacing:-1px;line-height:1;
+}
+.rank-pts-label{font-size:9.5px;color:var(--t3);letter-spacing:1px;text-transform:uppercase}
+.rank-meta-row{display:flex;flex-wrap:wrap;gap:7px}
+.rmi{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.04);border:1px solid var(--br);border-radius:100px;
+  padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--t2);
+}
+.rmi.g{color:var(--green);border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.06)}
+.rmi.o{color:var(--o);border-color:rgba(255,92,26,.22);background:rgba(255,92,26,.06)}
 
-    /* ─── STEP HEAD ─── */
-    .step-head { padding: 30px 0 22px; }
-    .step-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--og2);
-      border: 1px solid var(--br2);
-      border-radius: 100px;
-      padding: 4px 13px;
-      font-size: 10.5px; font-weight: 700;
-      color: var(--o); letter-spacing: 1.5px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .step-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 33px; font-weight: 900;
-      line-height: 1.05; letter-spacing: .5px;
-      text-transform: uppercase; color: var(--t1);
-    }
-    .step-title em { font-style: normal; color: var(--o); }
-    .step-sub {
-      font-size: 13.5px; color: var(--t2);
-      line-height: 1.6; margin-top: 8px; font-weight: 300;
-    }
+/* ─── RANK PROGRESS ──────────────────────── */
+.rp-card{
+  background:var(--glass);border:1px solid var(--br);border-radius:16px;
+  padding:16px;margin-bottom:12px;
+}
+.rp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rp-label{font-size:9.5px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.rp-next{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--o);letter-spacing:1px;text-transform:uppercase}
+.rp-track{height:6px;background:var(--s4);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.rp-fill{
+  height:100%;background:linear-gradient(90deg,var(--o),var(--o2));
+  border-radius:3px;width:0%;transition:width 1.3s cubic-bezier(.4,0,.2,1);
+}
+.rp-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--t3)}
+.rp-foot strong{color:var(--t1);font-weight:600}
 
-    /* ─── CARD ─── */
-    .card {
-      background: var(--s2);
-      border: 1px solid var(--br);
-      border-radius: 18px;
-      padding: 20px 18px;
-      margin-bottom: 12px;
-    }
-    .card-question {
-      font-size: 14.5px; font-weight: 600;
-      color: var(--t1); margin-bottom: 14px; line-height: 1.45;
-    }
+/* ─── SECTION HEADER ─────────────────────── */
+.sh{display:flex;align-items:center;gap:8px;margin:20px 0 10px}
+.sh-title{font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.sh-line{flex:1;height:1px;background:var(--br)}
 
-    /* ─── INPUTS ─── */
-    .field { display: flex; flex-direction: column; gap: 7px; }
-    .field label {
-      font-size: 10.5px; font-weight: 700;
-      color: var(--t3); letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    .input-wrap { position: relative; }
-    .input-wrap input {
-      padding-right: 46px;
-    }
-    .input-unit {
-      position: absolute; right: 15px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 11.5px; font-weight: 700;
-      color: var(--t3); letter-spacing: .5px;
-      pointer-events: none;
-    }
-    input[type="number"],
-    textarea {
-      background: var(--s3);
-      border: 1.5px solid var(--br);
-      border-radius: 12px;
-      padding: 13px 15px;
-      font-family: 'Barlow', sans-serif;
-      font-size: 16px; font-weight: 500;
-      color: var(--t1); outline: none;
-      transition: border-color .2s, background .2s;
-      width: 100%;
-      -webkit-appearance: none;
-    }
-    input[type="number"]:focus,
-    textarea:focus {
-      border-color: var(--o);
-      background: rgba(255,92,26,.04);
-    }
-    input[type="number"]::placeholder,
-    textarea::placeholder { color: var(--t3); font-weight: 300; }
-    textarea { resize: none; min-height: 88px; line-height: 1.6; font-size: 14px; }
+/* ─── EVOLUTION ROWS ─────────────────────── */
+.evo-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.evo-row:last-child{border-bottom:none}
+.evo-ic{font-size:14px;width:20px;flex-shrink:0}
+.evo-nm{font-size:12.5px;color:var(--t2);flex:1;margin:0 9px}
+.evo-pv{font-size:12px;color:var(--t3);min-width:22px;text-align:right}
+.evo-ar{font-size:13px;margin:0 7px;font-weight:700}
+.evo-cv{font-size:13px;font-weight:700;min-width:22px}
+.evo-cv.up{color:var(--green)}.evo-cv.dn{color:var(--red)}.evo-cv.sm{color:var(--t2)}
 
-    .two-col {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+/* ─── FOCUS CARD ─────────────────────────── */
+.focus-card{
+  background:linear-gradient(135deg,rgba(255,92,26,.09),rgba(255,61,0,.04));
+  border:1px solid var(--br2);border-radius:18px;padding:18px 16px;
+  margin-bottom:12px;position:relative;overflow:hidden;
+}
+.focus-card::before{
+  content:'';position:absolute;top:-24px;right:-24px;
+  width:90px;height:90px;
+  background:radial-gradient(circle,rgba(255,92,26,.18),transparent 70%);pointer-events:none;
+}
+.focus-tag{font-family:'Barlow Condensed',sans-serif;font-size:9.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--o);margin-bottom:6px}
+.focus-text{font-size:14.5px;font-weight:600;color:var(--t1);line-height:1.5}
+.focus-insight{font-size:12.5px;color:var(--t2);line-height:1.65;margin-top:8px;font-weight:300;display:none}
+.focus-loading{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t3);margin-bottom:8px}
 
-    /* ─── SCALE BUTTONS (0–10) ─── */
-    .scale-labels {
-      display: flex; justify-content: space-between;
-      font-size: 10.5px; color: var(--t3);
-      margin-bottom: 9px; font-weight: 500;
-    }
-    .scale-grid {
-      display: grid;
-      grid-template-columns: repeat(11, 1fr);
-      gap: 4px;
-    }
-    .sc-btn {
-      aspect-ratio: 1;
-      border: 1.5px solid var(--br);
-      border-radius: 10px;
-      background: var(--s3);
-      color: var(--t3);
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; font-weight: 900;
-      cursor: pointer;
-      transition: all .14s ease;
-      display: flex; align-items: center; justify-content: center;
-      padding: 0; line-height: 1;
-    }
-    .sc-btn:active { transform: scale(.86); }
-    .sc-btn.active {
-      border-color: transparent; color: #fff;
-      transform: scale(1.1);
-    }
-    /* Color tiers for score context */
-    .sc-btn[data-val="0"].active,
-    .sc-btn[data-val="1"].active,
-    .sc-btn[data-val="2"].active {
-      background: linear-gradient(135deg,#ef4444,#dc2626);
-      box-shadow: 0 4px 14px rgba(239,68,68,.4);
-    }
-    .sc-btn[data-val="3"].active,
-    .sc-btn[data-val="4"].active {
-      background: linear-gradient(135deg,#f59e0b,#d97706);
-      box-shadow: 0 4px 14px rgba(245,158,11,.4);
-    }
-    .sc-btn[data-val="5"].active,
-    .sc-btn[data-val="6"].active,
-    .sc-btn[data-val="7"].active {
-      background: linear-gradient(135deg,var(--o),var(--o2));
-      box-shadow: 0 4px 14px rgba(255,92,26,.4);
-    }
-    .sc-btn[data-val="8"].active,
-    .sc-btn[data-val="9"].active,
-    .sc-btn[data-val="10"].active {
-      background: linear-gradient(135deg,#22c55e,#16a34a);
-      box-shadow: 0 4px 14px rgba(34,197,94,.4);
-    }
+/* ─── JOURNEY ────────────────────────────── */
+.journey-track{display:flex;align-items:flex-start;width:100%;padding:4px 0 2px}
+.jn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:58px}
+.jl{flex:1;height:2px;background:var(--br);margin-top:22px;min-width:8px}
+.jl.done{background:var(--o)}
+.jnc{
+  width:44px;height:44px;border-radius:50%;
+  border:2px solid var(--br);background:var(--s2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;position:relative;transition:all .3s;
+}
+.jnc.done{border-color:rgba(255,255,255,.18);background:var(--s3)}
+.jnc.cur{
+  border-color:var(--rank-color);
+  box-shadow:0 0 20px var(--rank-glow);
+  background:var(--og2);width:50px;height:50px;font-size:22px;
+}
+.jnc.locked{opacity:.3;filter:grayscale(1)}
+.jnc-ck{
+  position:absolute;bottom:-2px;right:-2px;width:15px;height:15px;
+  border-radius:50%;background:var(--green);border:2px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:8px;line-height:1;
+}
+.jnn{font-family:'Barlow Condensed',sans-serif;font-size:8.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-top:6px}
+.jnn.cur{color:var(--o)}.jnn.done{color:var(--t2)}
 
-    /* ─── STEPPER ─── */
-    .stepper {
-      display: flex; align-items: center;
-      background: var(--s3);
-      border: 1.5px solid var(--br);
-      border-radius: 13px; overflow: hidden;
-    }
-    .stp-btn {
-      width: 56px; height: 54px; flex-shrink: 0;
-      background: none; border: none; cursor: pointer;
-      color: var(--t2); font-size: 26px; font-weight: 300;
-      display: flex; align-items: center; justify-content: center;
-      transition: all .15s;
-    }
-    .stp-btn:active { background: var(--og2); color: var(--o); }
-    .stp-val {
-      flex: 1; text-align: center;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 24px; font-weight: 900; color: var(--t1);
-      border-left: 1px solid var(--br);
-      border-right: 1px solid var(--br);
-      padding: 14px 0;
-    }
+/* ─── STREAK TRACKER ─────────────────────── */
+.streak-tracker{
+  display:flex;align-items:center;gap:12px;
+  background:linear-gradient(135deg,rgba(255,92,26,.1),rgba(255,61,0,.05));
+  border:1px solid var(--br2);border-radius:16px;
+  padding:14px 16px;margin-bottom:12px;
+}
+.st-icon{font-size:26px;flex-shrink:0}
+.st-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--o);margin-bottom:3px}
+.st-msg{font-size:13px;color:var(--t2);line-height:1.5;font-weight:400}
+.st-msg strong{color:var(--t1);font-weight:700}
 
-    /* ─── TOGGLE CARDIO ─── */
-    .toggle-pair {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    }
-    .tog-btn {
-      padding: 14px 8px;
-      border-radius: 13px;
-      border: 1.5px solid var(--br);
-      background: var(--s3);
-      color: var(--t2);
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 15px; font-weight: 800;
-      letter-spacing: 1px; text-transform: uppercase;
-      cursor: pointer;
-      transition: all .15s;
-      display: flex; align-items: center;
-      justify-content: center; gap: 7px;
-    }
-    .tog-btn:active { transform: scale(.97); }
-    .tog-yes.sel {
-      background: rgba(34,197,94,.1);
-      border-color: rgba(34,197,94,.4);
-      color: var(--green);
-    }
-    .tog-no.sel {
-      background: rgba(239,68,68,.09);
-      border-color: rgba(239,68,68,.35);
-      color: #ef4444;
-    }
+/* ─── BADGES ─────────────────────────────── */
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.bi{
+  background:var(--glass);border:1px solid var(--br);border-radius:14px;
+  padding:13px 7px;display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:5px;position:relative;transition:all .2s;
+}
+.bi.on{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12)}
+.bi.on::before{
+  content:'';position:absolute;inset:-1px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(255,92,26,.14),transparent 65%);pointer-events:none;
+}
+.bi-ic{font-size:25px;line-height:1;filter:grayscale(1) brightness(.35)}
+.bi.on .bi-ic{filter:none;filter:drop-shadow(0 0 7px rgba(255,92,26,.45))}
+.bi-nm{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.2px;line-height:1.35;text-align:center}
+.bi.on .bi-nm{color:var(--t2)}
+.bi-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:var(--o);box-shadow:0 0 6px var(--o)}
+.badges-cat{font-size:9px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin:14px 0 8px}
 
-    /* ─── NAV BUTTONS ─── */
-    .nav-area {
-      padding-top: 6px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .btn-next {
-      width: 100%; padding: 17px 20px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--o), var(--o2));
-      border: none; cursor: pointer;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 17px; font-weight: 900;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: #fff;
-      box-shadow: 0 8px 28px rgba(255,92,26,.35);
-      transition: transform .15s, box-shadow .15s;
-      display: flex; align-items: center;
-      justify-content: center; gap: 10px;
-    }
-    .btn-next:active { transform: scale(.98); box-shadow: 0 4px 14px rgba(255,92,26,.2); }
-    .btn-next:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-back {
-      background: none; border: none; cursor: pointer;
-      font-family: 'Barlow', sans-serif;
-      font-size: 13px; font-weight: 500;
-      color: var(--t3); text-align: center;
-      padding: 6px; transition: color .2s;
-    }
-    .btn-back:hover { color: var(--t2); }
+/* ─── STATS ──────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat-c{
+  background:var(--glass);border:1px solid var(--br);border-radius:14px;
+  padding:14px 8px;text-align:center;
+}
+.stat-ic{font-size:16px;margin-bottom:5px}
+.stat-v{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--t1);line-height:1}
+.stat-l{font-size:9px;font-weight:600;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
 
-    /* ─── ERROR MSG ─── */
-    .err {
-      background: rgba(239,68,68,.09);
-      border: 1px solid rgba(239,68,68,.25);
-      border-radius: 11px; padding: 11px 15px;
-      font-size: 13px; color: #ef4444;
-      margin-bottom: 10px; display: none;
-    }
-    .err.show { display: block; }
+/* ─── HISTORY ────────────────────────────── */
+.hist-item{
+  display:flex;align-items:center;padding:11px 13px;
+  background:var(--glass);border:1px solid var(--br);border-radius:14px;margin-bottom:8px;gap:11px;
+}
+.hist-wk{font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:700;color:var(--t3);letter-spacing:.5px;text-transform:uppercase;flex-shrink:0;min-width:48px}
+.hist-sc{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--t1);line-height:1;flex-shrink:0}
+.hist-sc span{font-size:10.5px;color:var(--t3);font-weight:400}
+.hist-evo{flex:1}
+.hist-dt{font-size:11px;font-weight:600}
+.hist-dt.up{color:var(--green)}.hist-dt.dn{color:var(--red)}.hist-dt.sm{color:var(--t3)}
+.hist-btn{
+  background:none;border:1px solid var(--br);border-radius:8px;
+  padding:5px 9px;font-size:10px;font-weight:600;color:var(--t3);cursor:pointer;
+  transition:all .15s;flex-shrink:0;
+}
+.hist-btn:active{color:var(--o);border-color:var(--br2)}
 
-    /* ─── LOADING SPINNER ─── */
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,.3);
-      border-top-color: #fff; border-radius: 50%;
-      animation: spin .7s linear infinite; flex-shrink: 0;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+/* ─── CTA BUTTON ─────────────────────────── */
+.btn-missao{
+  width:100%;padding:19px;border-radius:16px;
+  background:linear-gradient(135deg,var(--o),var(--o2));
+  border:none;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;
+  letter-spacing:2.5px;text-transform:uppercase;color:#fff;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  animation:cta-pulse 2.6s ease-in-out infinite;transition:transform .15s;margin-top:8px;
+}
+.btn-missao:active{transform:scale(.98)}
+@keyframes cta-pulse{0%,100%{box-shadow:0 8px 36px rgba(255,92,26,.35)}50%{box-shadow:0 8px 60px rgba(255,92,26,.65)}}
+.cta-sub{font-size:11.5px;color:var(--t3);text-align:center;margin-top:8px}
 
-    /* ─────────────────────────────── */
-    /* STEP 0: WELCOME                 */
-    /* ─────────────────────────────── */
-    .welcome {
-      padding: 44px 0 36px;
-      display: flex; flex-direction: column;
-      align-items: center; text-align: center;
-    }
-    .av-shell {
-      width: 100px; height: 100px;
-      position: relative; margin-bottom: 24px;
-    }
-    .av-ring {
-      position: absolute; inset: 0;
-      border-radius: 50%;
-      background: conic-gradient(
-        transparent 0deg,
-        rgba(255,92,26,.15) 20deg,
-        var(--o) 140deg,
-        var(--o2) 220deg,
-        rgba(255,61,0,.2) 300deg,
-        transparent 340deg
-      );
-      animation: spin 3.5s linear infinite;
-    }
-    .av-inner {
-      position: absolute; inset: 4px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #1c0800, var(--s2));
-      border: 2px solid var(--bg);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 36px;
-    }
-    .welcome-pre {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11.5px; font-weight: 800;
-      letter-spacing: 3.5px; text-transform: uppercase;
-      color: var(--o); margin-bottom: 8px;
-    }
-    .welcome-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 40px; font-weight: 900;
-      line-height: 1.0; letter-spacing: .5px;
-      text-transform: uppercase; color: var(--t1);
-      margin-bottom: 12px;
-    }
-    .welcome-title em { font-style: normal; color: var(--o); }
-    .welcome-body {
-      font-size: 14px; color: var(--t2);
-      line-height: 1.7; max-width: 295px;
-      font-weight: 300; margin-bottom: 22px;
-    }
-    .chips-row {
-      display: flex; gap: 7px;
-      flex-wrap: wrap; justify-content: center;
-      margin-bottom: 26px;
-    }
-    .chip {
-      display: flex; align-items: center; gap: 5px;
-      background: var(--s2); border: 1px solid var(--br);
-      border-radius: 100px; padding: 5px 13px;
-      font-size: 12px; font-weight: 500; color: var(--t2);
-    }
-    .btn-start {
-      width: 100%; padding: 18px 20px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--o), var(--o2));
-      border: none; cursor: pointer;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 19px; font-weight: 900;
-      letter-spacing: 2.5px; text-transform: uppercase;
-      color: #fff; animation: glow-pulse 2.4s ease-in-out infinite;
-      transition: transform .15s;
-    }
-    .btn-start:active { transform: scale(.98); }
-    @keyframes glow-pulse {
-      0%,100% { box-shadow: 0 8px 32px rgba(255,92,26,.38); }
-      50%      { box-shadow: 0 8px 48px rgba(255,92,26,.65); }
-    }
-    .time-note {
-      margin-top: 11px;
-      font-size: 12px; color: var(--t3);
-      display: flex; align-items: center; gap: 5px;
-      justify-content: center;
-    }
-    .time-note svg { width: 13px; height: 13px; }
+/* ─── FORM STEPS ─────────────────────────── */
+.step-head{padding:28px 0 18px}
+.step-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--og2);border:1px solid var(--br2);border-radius:100px;
+  padding:4px 13px;font-size:10px;font-weight:700;color:var(--o);
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;
+}
+.step-title{
+  font-family:'Barlow Condensed',sans-serif;font-size:31px;font-weight:900;
+  line-height:1.05;text-transform:uppercase;color:var(--t1);
+}
+.step-title em{font-style:normal;color:var(--o)}
+.step-sub{font-size:13px;color:var(--t2);line-height:1.65;margin-top:8px;font-weight:300}
 
-    /* ─────────────────────────────── */
-    /* STEP 7: SCORE REVEAL            */
-    /* ─────────────────────────────── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes confettiFall{0%{opacity:1;transform:translateY(-10px)}80%{opacity:1}100%{opacity:0;transform:translateY(80px)}}
+/* Card */
+.card{background:var(--glass);border:1px solid var(--br);border-radius:18px;padding:18px 16px;margin-bottom:12px}
+.card-q{font-size:13.5px;font-weight:600;color:var(--t1);margin-bottom:14px;line-height:1.45}
 
-    /* ── Cardio / Bowel option grid ── */
-    .cardio-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 4px;
-    }
-    .cardio-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 14px 10px;
-      border: 2px solid rgba(255,255,255,.12);
-      border-radius: 12px;
-      background: rgba(255,255,255,.05);
-      cursor: pointer;
-      transition: all .18s;
-      color: #fff;
-    }
-    .cardio-btn:hover { border-color: var(--o); background: rgba(232,93,4,.1); }
-    .cardio-btn.active { border-color: var(--o); background: rgba(232,93,4,.18); }
-    .cardio-icon { font-size: 22px; line-height: 1; }
-    .cardio-lbl  { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
-    .cardio-pts  { font-size: 11px; color: var(--o); font-weight: 700; }
+/* Inputs */
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:9.5px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase}
+.iw{position:relative}
+.iw input{padding-right:46px}
+.iu{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:700;color:var(--t3);pointer-events:none}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type="number"]{-moz-appearance:textfield}
+input[type="number"],textarea{
+  background:var(--s3);border:1.5px solid var(--br);border-radius:12px;
+  padding:14px 15px;font-family:'Barlow',sans-serif;
+  font-size:16px;font-weight:500;color:var(--t1);outline:none;
+  transition:border-color .2s,background .2s;width:100%;-webkit-appearance:none;
+}
+input[type="number"]:focus,textarea:focus{border-color:var(--o);background:rgba(255,92,26,.04)}
+input[type="number"]::placeholder,textarea::placeholder{color:var(--t3);font-weight:300}
+textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-    .score-screen {
-      padding: 32px 0 16px;
-      display: flex; flex-direction: column;
-      align-items: center; text-align: center;
-    }
-    .ring-shell {
-      width: 190px; height: 190px;
-      position: relative; margin-bottom: 22px;
-    }
-    .ring-svg { width: 190px; height: 190px; transform: rotate(-90deg); }
-    .ring-track { fill: none; stroke: var(--s3); stroke-width: 11; }
-    .ring-arc {
-      fill: none; stroke-width: 11; stroke-linecap: round;
-      stroke-dasharray: 503;
-      stroke-dashoffset: 503;
-      transition: stroke-dashoffset 2s cubic-bezier(.4,0,.2,1), stroke .5s ease;
-    }
-    .ring-center {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-    }
-    .score-num {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 60px; font-weight: 900;
-      line-height: 1; letter-spacing: -1px; color: var(--t1);
-    }
-    .score-lbl {
-      font-size: 9.5px; font-weight: 700;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: var(--t3); margin-top: 2px;
-    }
-    .tier-name {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 27px; font-weight: 900;
-      letter-spacing: 1.5px; text-transform: uppercase;
-      margin-bottom: 7px;
-    }
-    .tier-msg {
-      font-size: 13.5px; color: var(--t2);
-      font-weight: 300; line-height: 1.65;
-      max-width: 285px; margin-bottom: 24px;
-    }
+/* Scale */
+.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:9px;font-weight:500}
+.sg{display:grid;grid-template-columns:repeat(11,1fr);gap:3px}
+.scb{
+  aspect-ratio:1;border:1.5px solid var(--br);border-radius:8px;background:var(--s3);
+  color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:12.5px;font-weight:900;
+  cursor:pointer;transition:all .13s;display:flex;align-items:center;justify-content:center;padding:0;
+}
+.scb:active{transform:scale(.85)}
+.scb.active{border-color:transparent;color:#fff;transform:scale(1.07)}
+.scb[data-v="0"].active,.scb[data-v="1"].active,.scb[data-v="2"].active{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 3px 12px rgba(239,68,68,.4)}
+.scb[data-v="3"].active,.scb[data-v="4"].active{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 3px 12px rgba(245,158,11,.4)}
+.scb[data-v="5"].active,.scb[data-v="6"].active,.scb[data-v="7"].active{background:linear-gradient(135deg,var(--o),var(--o2));box-shadow:0 3px 12px rgba(255,92,26,.4)}
+.scb[data-v="8"].active,.scb[data-v="9"].active,.scb[data-v="10"].active{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 3px 12px rgba(34,197,94,.4)}
 
-    /* breakdown card */
-    .breakdown {
-      width: 100%; background: var(--s2);
-      border: 1px solid var(--br);
-      border-radius: 18px; padding: 20px 18px;
-      margin-bottom: 20px; text-align: left;
-    }
-    .bd-title {
-      font-size: 10.5px; font-weight: 700;
-      color: var(--t3); letter-spacing: 2px;
-      text-transform: uppercase; margin-bottom: 16px;
-    }
-    .bd-row {
-      display: flex; align-items: center;
-      margin-bottom: 11px;
-    }
-    .bd-row:last-child { margin-bottom: 0; }
-    .bd-icon { font-size: 14px; width: 22px; flex-shrink: 0; }
-    .bd-name {
-      font-size: 12.5px; color: var(--t2);
-      font-weight: 500; flex: 1; margin: 0 10px;
-    }
-    .bd-bar-wrap {
-      flex: 2; height: 5px;
-      background: var(--s3); border-radius: 3px;
-      overflow: hidden; margin-right: 10px;
-    }
-    .bd-bar {
-      height: 100%; border-radius: 3px;
-      background: linear-gradient(90deg,var(--o),var(--o2));
-      width: 0%;
-      transition: width 1.6s cubic-bezier(.4,0,.2,1);
-    }
-    .bd-pts {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13.5px; font-weight: 800;
-      color: var(--o); min-width: 38px; text-align: right;
-    }
+/* Stepper */
+.stepper{display:flex;align-items:center;background:var(--s3);border:1.5px solid var(--br);border-radius:13px;overflow:hidden}
+.stpb{width:54px;height:52px;flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--t2);font-size:26px;font-weight:300;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.stpb:active{background:var(--og2);color:var(--o)}
+.stpv{flex:1;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--t1);border-left:1px solid var(--br);border-right:1px solid var(--br);padding:11px 0}
 
-    .success-note {
-      font-size: 13px; color: var(--t3);
-      text-align: center; line-height: 1.65;
-    }
+/* Option grid */
+.og{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.ob{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 8px;border:2px solid var(--br);border-radius:13px;
+  background:var(--s3);cursor:pointer;transition:all .17s;color:var(--t1);
+}
+.ob:active{transform:scale(.97)}
+.ob.active{border-color:var(--o);background:rgba(255,92,26,.1)}
+.ob-ic{font-size:21px;line-height:1}
+.ob-lb{font-size:12px;font-weight:700;text-align:center}
+.ob-sb{font-size:10.5px;color:var(--t3)}
+.ob.active .ob-sb{color:rgba(255,92,26,.75)}
+.ob-pt{font-size:10px;color:var(--o);font-weight:700;margin-top:1px}
 
-    /* ─── FADE IN ─── */
-    .fi { opacity:0; transform:translateY(18px); animation:fi .45s ease forwards; }
-    @keyframes fi { to { opacity:1; transform:none; } }
-    .d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.18s}
-    .d4{animation-delay:.26s}.d5{animation-delay:.34s}
-  </style>
+/* Nav */
+.nav{padding-top:6px;display:flex;flex-direction:column;gap:10px}
+.btn-nx{
+  width:100%;padding:17px 20px;border-radius:14px;
+  background:linear-gradient(135deg,var(--o),var(--o2));border:none;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;color:#fff;
+  box-shadow:0 8px 28px rgba(255,92,26,.3);transition:transform .15s,box-shadow .15s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn-nx:active{transform:scale(.98);box-shadow:0 4px 14px rgba(255,92,26,.2)}
+.btn-nx:disabled{opacity:.45;cursor:not-allowed}
+.btn-bk{
+  background:none;border:none;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:13px;font-weight:500;
+  color:var(--t3);text-align:center;padding:6px;transition:color .2s;
+}
+.btn-bk:hover{color:var(--t2)}
+.err{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  border-radius:10px;padding:10px 14px;font-size:12.5px;color:#ef4444;
+  margin-bottom:10px;display:none;
+}
+.err.show{display:block}
+
+/* Spinner */
+.sp{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Review */
+.rv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.rv-item{background:var(--s3);border:1px solid var(--br);border-radius:12px;padding:12px}
+.rv-label{font-size:9px;color:var(--t3);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+.rv-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--t1)}
+
+/* ─── SCORE REVEAL ───────────────────────── */
+.score-screen{padding:28px 0 16px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ring-shell{width:180px;height:180px;position:relative;margin-bottom:20px}
+.ring-svg{width:180px;height:180px;transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--s4);stroke-width:10}
+.ring-arc{fill:none;stroke-width:10;stroke-linecap:round;stroke-dasharray:503;stroke-dashoffset:503;transition:stroke-dashoffset 2s cubic-bezier(.4,0,.2,1),stroke .5s}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:900;line-height:1;letter-spacing:-1px;color:var(--t1)}
+.score-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3)}
+.tier-name{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.tier-msg{font-size:13px;color:var(--t2);font-weight:300;line-height:1.65;max-width:280px;margin-bottom:20px}
+
+/* Points earned */
+.pts-earned{
+  background:linear-gradient(135deg,rgba(255,92,26,.13),rgba(255,61,0,.06));
+  border:1px solid var(--br2);border-radius:16px;padding:16px 20px;
+  width:100%;margin-bottom:14px;text-align:center;
+}
+.pe-num{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;color:var(--o);line-height:1}
+.pe-lbl{font-size:10.5px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-top:4px}
+.pe-sub{font-size:12px;color:var(--t2);margin-top:10px;line-height:1.5}
+
+/* Streak badge */
+.streak-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,92,26,.1);border:1px solid var(--br2);border-radius:100px;
+  padding:8px 16px;font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;font-weight:800;color:var(--o);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;
+}
+
+/* Breakdown */
+.breakdown{width:100%;background:var(--glass);border:1px solid var(--br);border-radius:18px;padding:18px 16px;margin-bottom:14px;text-align:left}
+.bd-title{font-size:9.5px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.bd-row{display:flex;align-items:center;margin-bottom:10px}
+.bd-row:last-child{margin-bottom:0}
+.bd-ic{font-size:12px;width:19px;flex-shrink:0}
+.bd-nm{font-size:12px;color:var(--t2);font-weight:500;flex:1;margin:0 8px}
+.bd-bw{flex:2;height:4px;background:var(--s4);border-radius:2px;overflow:hidden;margin-right:8px}
+.bd-b{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--o),var(--o2));width:0%;transition:width 1.6s cubic-bezier(.4,0,.2,1)}
+.bd-pt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--o);min-width:38px;text-align:right}
+
+/* Rank progress s7 */
+.s7-rp{width:100%;background:var(--glass);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:14px}
+
+/* AI insight s7 */
+.ai-box{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:14px;padding:14px 16px;margin-bottom:14px;width:100%;text-align:left;display:none}
+.ai-lbl{font-size:9px;color:#60a5fa;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.ai-txt{font-size:13px;color:var(--t2);line-height:1.65;font-weight:300}
+
+.success-note{font-size:12.5px;color:var(--t3);text-align:center;line-height:1.7}
+
+/* ─── MODAL ──────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:var(--s1);border-radius:24px 24px 0 0;border:1px solid var(--br);padding:20px 20px 44px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.modal-handle{width:40px;height:4px;background:var(--s4);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;text-transform:uppercase;color:var(--t1);margin-bottom:16px}
+.modal-sec{margin-bottom:14px}
+.modal-lbl{font-size:9.5px;font-weight:700;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px}
+.modal-txt{font-size:13.5px;color:var(--t2);line-height:1.65;font-weight:300}
+.modal-close{width:100%;padding:14px;background:var(--s3);border:1px solid var(--br);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;color:var(--t2);margin-top:4px;transition:all .15s}
+.modal-close:active{background:var(--s4)}
+
+/* ─── ALREADY DONE ───────────────────────── */
+#already-done{
+  display:none;position:fixed;inset:0;background:var(--bg);z-index:999;
+  flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;
+}
+
+/* ─── ANIMATIONS ─────────────────────────── */
+.fi{opacity:0;transform:translateY(14px);animation:fi .4s ease forwards}
+@keyframes fi{to{opacity:1;transform:none}}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.18s}
+.d4{animation-delay:.26s}.d5{animation-delay:.34s}.d6{animation-delay:.42s}
+</style>
 </head>
 <body>
 
-<div class="app">
+<div class="app" id="app">
 
-  <!-- TOP BAR (hidden on welcome) -->
-  <div class="topbar" id="topbar" style="display:none">
-    <div class="topbar-inner">
-      <div class="topbar-logo">LAPIDADOS <span>CLUB</span></div>
-      <div class="step-counter" id="stepLbl">1 / 6</div>
+<!-- TOPBAR -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="topbar-inner">
+    <div class="topbar-logo">LAPIDADOS <span>CLUB</span></div>
+    <div class="step-counter" id="stepLbl">1 / 6</div>
+  </div>
+</div>
+<div class="progress-track" id="progressTrack" style="display:none">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════════════
+     STEP 0 · DASHBOARD
+═══════════════════════════════ -->
+<div class="step active" id="s0">
+  <div id="dash-loading" style="padding-top:40px">
+    <div class="skeleton sk-line" style="width:55%;margin-bottom:5px"></div>
+    <div class="skeleton sk-line" style="width:88%;height:22px;margin-bottom:26px"></div>
+    <div class="skeleton sk-block" style="height:130px;margin-bottom:12px"></div>
+    <div class="skeleton sk-block" style="height:62px;margin-bottom:12px"></div>
+    <div class="skeleton sk-block" style="height:95px;margin-bottom:12px"></div>
+    <div class="skeleton sk-block" style="height:82px;margin-bottom:12px"></div>
+    <div class="skeleton sk-block" style="height:55px"></div>
+  </div>
+  <div id="dash-content" style="display:none"></div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 1 · DADOS FÍSICOS
+═══════════════════════════════ -->
+<div class="step" id="s1">
+  <div class="step-head">
+    <div class="step-tag">📏 Dados físicos</div>
+    <h2 class="step-title">Corpo &amp;<br><em>Medidas</em></h2>
+    <p class="step-sub">Registre como seu corpo está essa semana.</p>
+  </div>
+  <div class="card">
+    <div class="two-col">
+      <div class="field">
+        <label>Peso atual</label>
+        <div class="iw">
+          <input type="number" id="f-weight" placeholder="75.5" step="0.1" min="30" max="300"/>
+          <span class="iu">kg</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Altura</label>
+        <div class="iw">
+          <input type="number" id="f-height" placeholder="175" min="100" max="250"/>
+          <span class="iu">cm</span>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="progress-track" id="progressTrack" style="display:none">
-    <div class="progress-fill" id="progressFill"></div>
+  <div class="err" id="e1">⚠ Preencha peso e altura para continuar.</div>
+  <div class="nav">
+    <button class="btn-nx" onclick="v1()">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(0)">← Voltar ao painel</button>
   </div>
+</div>
 
-  <div class="main">
+<!-- ═══════════════════════════════
+     STEP 2 · ALIMENTAÇÃO
+═══════════════════════════════ -->
+<div class="step" id="s2">
+  <div class="step-head">
+    <div class="step-tag">🥗 Alimentação</div>
+    <h2 class="step-title">Adesão ao<br><em>Plano</em></h2>
+    <p class="step-sub">Seja honesto — os dados existem pra te ajudar, não pra te julgar.</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Como você avalia sua dieta essa semana?</div>
+    <div class="scale-labels"><span>😓 Péssima</span><span>🔥 Perfeita</span></div>
+    <div class="sg" id="sg-diet"></div>
+  </div>
+  <div class="card">
+    <div class="card-q">Quantas refeições saíram do plano?</div>
+    <div class="stepper">
+      <button class="stpb" onclick="stp(-1)">−</button>
+      <div class="stpv" id="off-val">0</div>
+      <button class="stpb" onclick="stp(1)">+</button>
+    </div>
+  </div>
+  <div class="err" id="e2">⚠ Selecione uma nota para a dieta.</div>
+  <div class="nav">
+    <button class="btn-nx" onclick="v2()">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(1)">← Voltar</button>
+  </div>
+</div>
 
-    <!-- ══════════════════════════════════════
-         STEP 0 · BOAS-VINDAS
-    ══════════════════════════════════════ -->
-    <div class="step active" id="s0">
-      <div class="welcome fi d1">
-        <div class="av-shell">
-          <div class="av-ring"></div>
-          <div class="av-inner">🔥</div>
-        </div>
-        <div class="welcome-pre">Lapidados Club</div>
-        <h1 class="welcome-title">E aí, <em id="pName">campeão</em>!</h1>
-        <!-- Rank badge — preenchido via JS quando patient_id está na URL -->
-        <div id="welcomeRankWrap" style="display:none;margin:10px auto 4px;text-align:center">
-          <div id="welcomeRankBadge" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:24px;font-weight:700;font-size:14px;letter-spacing:-.2px;border:2px solid">
-            <span id="welcomeRankIcon" style="font-size:20px">🪨</span>
-            <span id="welcomeRankName">Bruto</span>
-            <span id="welcomeRankPts" style="font-size:11px;opacity:.75;font-weight:500"></span>
-          </div>
-        </div>
-        <p class="welcome-body">
-          Seu check-in semanal está aqui. Responde rápido, o Leo analisa tudo e já vai te orientar com base nos seus dados.
-        </p>
+<!-- ═══════════════════════════════
+     STEP 3 · TREINO
+═══════════════════════════════ -->
+<div class="step" id="s3">
+  <div class="step-head">
+    <div class="step-tag">🏋️ Treino</div>
+    <h2 class="step-title">Treino &amp;<br><em>Movimento</em></h2>
+    <p class="step-sub">Como foram seus treinos durante a semana?</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Como você avalia seus treinos de musculação?</div>
+    <div class="scale-labels"><span>😓 Péssimo</span><span>🏆 Máximo</span></div>
+    <div class="sg" id="sg-train"></div>
+  </div>
+  <div class="card">
+    <div class="card-q">Fez os cardios como planejado?</div>
+    <div class="og" id="og-cardio"></div>
+  </div>
+  <div class="err" id="e3">⚠ Avalie o treino e selecione o cardio.</div>
+  <div class="nav">
+    <button class="btn-nx" onclick="v3()">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(2)">← Voltar</button>
+  </div>
+</div>
 
-        <!-- RANK JOURNEY -->
-        <div style="width:100%;margin:16px 0;background:rgba(255,255,255,0.05);border-radius:14px;padding:16px 18px;text-align:left;border:1px solid rgba(255,255,255,0.1)">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.5);font-weight:700;margin-bottom:12px">🗺️ Sua jornada no Lapidados Club</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.5;margin-bottom:14px">
-            Cada check-in soma pontos ao seu acumulado. Conforme você evolui, desbloqueias novos ranks — cada um representa uma mudança real no seu comportamento.
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(107,114,128,.12);border-radius:9px;border:1px solid rgba(107,114,128,.2)">
-              <span style="font-size:18px;flex-shrink:0">🪨</span>
-              <div><div style="font-size:12px;font-weight:700;color:#9ca3af">BRUTO · 0–199 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Você entrou no jogo. Aprende a aparecer toda semana e não voltar ao padrão de antes.</div></div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(59,130,246,.08);border-radius:9px;border:1px solid rgba(59,130,246,.2)">
-              <span style="font-size:18px;flex-shrink:0">🧠</span>
-              <div><div style="font-size:12px;font-weight:700;color:#60a5fa">DESTRAVADO · 200–499 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Saiu do automático. Começa a entender o que funciona no seu corpo e criar consistência.</div></div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(124,58,237,.08);border-radius:9px;border:1px solid rgba(124,58,237,.2)">
-              <span style="font-size:18px;flex-shrink:0">⚡</span>
-              <div><div style="font-size:12px;font-weight:700;color:#a78bfa">AFIADO · 500–999 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Você não tá só tentando… você tá executando. Consistência virou parte da sua rotina.</div></div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(249,115,22,.08);border-radius:9px;border:1px solid rgba(249,115,22,.2)">
-              <span style="font-size:18px;flex-shrink:0">🔥</span>
-              <div><div style="font-size:12px;font-weight:700;color:#fb923c">IMPARÁVEL · 1000–1999 pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Controle total. Suas decisões param de oscilar e o corpo começa a responder.</div></div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:rgba(217,119,6,.1);border-radius:9px;border:1px solid rgba(217,119,6,.3)">
-              <span style="font-size:18px;flex-shrink:0">👑</span>
-              <div><div style="font-size:12px;font-weight:700;color:#fcd34d">LAPIDADO · 2000+ pts</div><div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">Topo. Pouca gente sustenta o que você sustentou. Isso é comportamento, não motivação.</div></div>
-            </div>
-          </div>
-          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:12px;text-align:center">
-            ⚠️ Semanas sem resposta (após link enviado) = −10pts
-          </div>
-        </div>
-        <div class="chips-row">
-          <div class="chip">⏱ ~2 min</div>
-          <div class="chip">📊 Score ao final</div>
-          <div class="chip">📅 Semana <span id="weekNum">—</span></div>
-        </div>
-        <button class="btn-start" onclick="goTo(1)">
-          Iniciar Check-in →
-        </button>
-        <div class="time-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Seus dados ficam 100% seguros e privados
-        </div>
+<!-- ═══════════════════════════════
+     STEP 4 · ENERGIA & FOME
+═══════════════════════════════ -->
+<div class="step" id="s4">
+  <div class="step-head">
+    <div class="step-tag">⚡ Bem-estar</div>
+    <h2 class="step-title">Energia &amp;<br><em>Fome</em></h2>
+    <p class="step-sub">Como seu corpo respondeu à semana?</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Como você avalia seu nível de energia geral?</div>
+    <div class="scale-labels"><span>💤 Esgotado</span><span>⚡ Máxima</span></div>
+    <div class="sg" id="sg-energy"></div>
+  </div>
+  <div class="card">
+    <div class="card-q">Como foi seu nível de fome / apetite?</div>
+    <div class="scale-labels"><span>🤢 Sem fome</span><span>🔥 Fome intensa</span></div>
+    <div class="sg" id="sg-hunger"></div>
+  </div>
+  <div class="err" id="e4">⚠ Avalie sua energia e fome para continuar.</div>
+  <div class="nav">
+    <button class="btn-nx" onclick="v4()">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(3)">← Voltar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 4B · SONO & INTESTINO
+═══════════════════════════════ -->
+<div class="step" id="s4b">
+  <div class="step-head">
+    <div class="step-tag">🌙 Recuperação</div>
+    <h2 class="step-title">Sono &amp;<br><em>Intestino</em></h2>
+    <p class="step-sub">Dois indicadores que impactam diretamente sua composição e energia.</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Como foi seu SONO essa semana?</div>
+    <div class="scale-labels"><span>😣 Péssimo</span><span>😁 Ótimo</span></div>
+    <div class="sg" id="sg-sleep"></div>
+  </div>
+  <div class="card">
+    <div class="card-q">Como foi seu intestino? Evacuação diária?</div>
+    <div class="og" style="grid-template-columns:repeat(3,1fr)" id="og-bowel"></div>
+  </div>
+  <div class="err" id="e4b">⚠ Avalie o sono e selecione o intestino para continuar.</div>
+  <div class="nav">
+    <button class="btn-nx" onclick="v4b()">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(4)">← Voltar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 5 · O QUE PESOU
+═══════════════════════════════ -->
+<div class="step" id="s5">
+  <div class="step-head">
+    <div class="step-tag">💬 Reflexão</div>
+    <h2 class="step-title">O que <em>pesou</em><br>essa semana?</h2>
+    <p class="step-sub">Essas respostas guiam os ajustes do Leo. Seja direto.</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Maior dificuldade da semana</div>
+    <textarea id="f-difficulty" placeholder="Ex: Perdi motivação para treinar na quarta, tive uma saída social no final de semana e escapuliu..."></textarea>
+  </div>
+  <div class="card">
+    <div class="card-q">Fatores externos que afetaram</div>
+    <textarea id="f-external" placeholder="Ex: Semana muito estressante no trabalho, noite de sono ruim, viagem de negócios..."></textarea>
+  </div>
+  <div class="nav">
+    <button class="btn-nx" onclick="goTo('5b')">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo('4b')">← Voltar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 5B · O QUE MANDOU BEM
+═══════════════════════════════ -->
+<div class="step" id="s5b">
+  <div class="step-head">
+    <div class="step-tag">🏆 Conquistas</div>
+    <h2 class="step-title">O que você<br><em>mandou bem?</em></h2>
+    <p class="step-sub">Registrar as vitórias é tão importante quanto corrigir o que falhou.</p>
+  </div>
+  <div class="card">
+    <div class="card-q">Vitórias da semana</div>
+    <textarea id="f-wins" placeholder="Ex: Segui o plano de segunda a sexta sem escorregar, bati minha meta de proteína todos os dias..."></textarea>
+  </div>
+  <div class="card">
+    <div class="card-q">O que pode melhorar?</div>
+    <textarea id="f-improvements" placeholder="Ex: Preciso melhorar o sono, tomar mais água, ser mais consistente nos treinos de fim de semana..."></textarea>
+  </div>
+  <div class="card">
+    <div class="card-q">🥊 Precisa de ajuda do Leo?</div>
+    <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que..."></textarea>
+  </div>
+  <div class="err" id="e-submit" style="display:none"></div>
+  <div class="nav">
+    <button class="btn-nx" onclick="goTo(6)">Próximo <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+    <button class="btn-bk" onclick="goTo(5)">← Voltar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 6 · REVISÃO
+═══════════════════════════════ -->
+<div class="step" id="s6">
+  <div class="step-head">
+    <div class="step-tag">✅ Revisão</div>
+    <h2 class="step-title">Tudo<br><em>Pronto</em></h2>
+    <p class="step-sub">Confira seus dados antes de registrar a evolução.</p>
+  </div>
+  <div class="rv-grid" id="rv-grid"></div>
+  <div class="err" id="e-submit">⚠ Erro ao enviar. Verifique sua conexão e tente novamente.</div>
+  <div class="nav">
+    <button class="btn-nx" id="btn-send" onclick="submit()">
+      <span id="send-txt">🚀 Registrar Evolução</span>
+      <div id="send-load" style="display:none;align-items:center;gap:10px"><div class="sp"></div>Enviando...</div>
+    </button>
+    <button class="btn-bk" onclick="goTo('5b')">← Voltar e editar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     STEP 7 · SCORE REVEAL
+═══════════════════════════════ -->
+<div class="step" id="s7">
+  <div class="score-screen">
+
+    <div class="ring-shell">
+      <svg class="ring-svg" viewBox="0 0 190 190">
+        <circle class="ring-track" cx="95" cy="95" r="80"/>
+        <circle class="ring-arc" id="ringArc" cx="95" cy="95" r="80"/>
+      </svg>
+      <div class="ring-center">
+        <div class="score-num" id="scoreNum">0</div>
+        <div class="score-lbl">LAPIDADOS SCORE</div>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         STEP 1 · DADOS FÍSICOS
-    ══════════════════════════════════════ -->
-    <div class="step" id="s1">
-      <div class="step-head">
-        <div class="step-tag">📏 Dados físicos</div>
-        <h2 class="step-title">Corpo &amp;<br><em>Medidas</em></h2>
-        <p class="step-sub">Registre como seu corpo está essa semana.</p>
-      </div>
+    <div class="tier-name" id="tierName"></div>
+    <div class="tier-msg"  id="tierMsg"></div>
 
-      <div class="card">
-        <div class="two-col">
-          <div class="field">
-            <label>Peso atual</label>
-            <div class="input-wrap">
-              <input type="number" id="f-weight" placeholder="75.5" step="0.1" min="30" max="300"/>
-              <span class="input-unit">kg</span>
-            </div>
-          </div>
-          <div class="field">
-            <label>Altura</label>
-            <div class="input-wrap">
-              <input type="number" id="f-height" placeholder="175" min="100" max="250"/>
-              <span class="input-unit">cm</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="pts-earned">
+      <div class="pe-num" id="peNum">+0</div>
+      <div class="pe-lbl">pontos conquistados</div>
+      <div class="pe-sub" id="peSub"></div>
+    </div>
 
-      <div class="err" id="e1">⚠ Preencha seu peso e altura para continuar.</div>
-      <div class="nav-area">
-        <button class="btn-next" onclick="v1()">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo(0)">← Voltar</button>
+    <div class="streak-badge" id="streakBadge" style="display:none">
+      🔥 <span id="streakNum">0</span> semanas seguidas
+    </div>
+
+    <!-- Evolution vs previous -->
+    <div id="s7-evo" style="width:100%;margin-bottom:14px;display:none">
+      <div class="breakdown">
+        <div class="bd-title">↗ EVOLUÇÃO VS SEMANA ANTERIOR</div>
+        <div id="s7-evo-rows"></div>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         STEP 2 · ALIMENTAÇÃO
-    ══════════════════════════════════════ -->
-    <div class="step" id="s2">
-      <div class="step-head">
-        <div class="step-tag">🥗 Alimentação</div>
-        <h2 class="step-title">Adesão ao<br><em>Plano</em></h2>
-        <p class="step-sub">Seja honesto — os dados existem pra te ajudar, não pra te julgar.</p>
+    <!-- Rank progress -->
+    <div class="s7-rp">
+      <div class="rp-header">
+        <span class="rp-label">Progresso do rank</span>
+        <span class="rp-next" id="s7-next-rank">—</span>
       </div>
-
-      <div class="card">
-        <div class="card-question">Como você avalia sua dieta essa semana?</div>
-        <div class="scale-labels"><span>😓 Péssima</span><span>🔥 Perfeita</span></div>
-        <div class="scale-grid" id="sg-diet"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-question">Quantas refeições saíram do plano?</div>
-        <div class="stepper" id="off-plan-stepper">
-          <button class="stp-btn" onclick="stp('off',-1)">−</button>
-          <div class="stp-val" id="off-val">0</div>
-          <button class="stp-btn" onclick="stp('off',1)">+</button>
-        </div>
-      </div>
-
-      <div class="err" id="e2">⚠ Selecione uma nota para a dieta.</div>
-      <div class="nav-area">
-        <button class="btn-next" onclick="v2()">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo(1)">← Voltar</button>
+      <div class="rp-track"><div class="rp-fill" id="s7-rank-bar"></div></div>
+      <div class="rp-foot">
+        <span id="s7-rank-curr"><strong>0</strong> pts</span>
+        <span id="s7-rank-needed">—</span>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         STEP 3 · TREINO
-    ══════════════════════════════════════ -->
-    <div class="step" id="s3">
-      <div class="step-head">
-        <div class="step-tag">🏋️ Treino</div>
-        <h2 class="step-title">Treino &amp;<br><em>Movimento</em></h2>
-        <p class="step-sub">Como foram seus treinos durante a semana?</p>
-      </div>
-
-      <div class="card">
-        <div class="card-question">Como você avalia seu treino essa semana?</div>
-        <div class="scale-labels"><span>😴 Fraco</span><span>💪 Intenso</span></div>
-        <div class="scale-grid" id="sg-training"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-question">Fez os cardios como planejado?</div>
-        <div class="cardio-grid">
-          <button class="cardio-btn" id="cardio-full" onclick="setCardio(10,'full')">
-            <span class="cardio-icon">✅</span>
-            <span class="cardio-lbl">Sim, todos</span>
-            <span class="cardio-pts">10pts</span>
-          </button>
-          <button class="cardio-btn" id="cardio-partial" onclick="setCardio(5,'partial')">
-            <span class="cardio-icon">🔄</span>
-            <span class="cardio-lbl">Sim, mas não todos</span>
-            <span class="cardio-pts">5pts</span>
-          </button>
-          <button class="cardio-btn" id="cardio-no" onclick="setCardio(0,'no')">
-            <span class="cardio-icon">❌</span>
-            <span class="cardio-lbl">Não fiz</span>
-            <span class="cardio-pts">0pts</span>
-          </button>
-          <button class="cardio-btn" id="cardio-none" onclick="setCardio(10,'none')">
-            <span class="cardio-icon">🏃</span>
-            <span class="cardio-lbl">Sem meta de cardio</span>
-            <span class="cardio-pts">10pts</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="err" id="e3">⚠ Avalie o treino e selecione o cardio.</div>
-      <div class="nav-area">
-        <button class="btn-next" onclick="v3()">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo(2)">← Voltar</button>
-      </div>
+    <!-- AI insight -->
+    <div class="ai-box" id="s7-ai">
+      <div class="ai-lbl">✨ Análise do seu check-in</div>
+      <div class="ai-txt" id="s7-ai-txt"></div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         STEP 4 · ENERGIA & FOME
-    ══════════════════════════════════════ -->
-    <div class="step" id="s4">
-      <div class="step-head">
-        <div class="step-tag">⚡ Sensações</div>
-        <h2 class="step-title">Energia &amp;<br><em>Fome</em></h2>
-        <p class="step-sub">Como seu corpo e mente responderam essa semana?</p>
-      </div>
-
-      <div class="card">
-        <div class="card-question">Nível de energia geral na semana</div>
-        <div class="scale-labels"><span>😴 No chão</span><span>⚡ No máximo</span></div>
-        <div class="scale-grid" id="sg-energy"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-question">Nível de fome que sentiu</div>
-        <div class="scale-labels"><span>😌 Saciado</span><span>🤤 Com muita fome</span></div>
-        <div class="scale-grid" id="sg-hunger"></div>
-      </div>
-
-      <div class="err" id="e4">⚠ Avalie energia e fome para continuar.</div>
-      <div class="nav-area">
-        <button class="btn-next" onclick="v4()">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo(3)">← Voltar</button>
-      </div>
+    <!-- Breakdown -->
+    <div class="breakdown">
+      <div class="bd-title">Detalhamento do Score</div>
+      <div class="bd-row"><div class="bd-ic">🥗</div><div class="bd-nm">Dieta</div><div class="bd-bw"><div class="bd-b" id="bb-diet"></div></div><div class="bd-pt" id="bp-diet">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🏋️</div><div class="bd-nm">Treino</div><div class="bd-bw"><div class="bd-b" id="bb-train"></div></div><div class="bd-pt" id="bp-train">—</div></div>
+      <div class="bd-row"><div class="bd-ic">⚡</div><div class="bd-nm">Energia</div><div class="bd-bw"><div class="bd-b" id="bb-energy"></div></div><div class="bd-pt" id="bp-energy">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🏃</div><div class="bd-nm">Cardio</div><div class="bd-bw"><div class="bd-b" id="bb-cardio"></div></div><div class="bd-pt" id="bp-cardio">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🍽️</div><div class="bd-nm">Aderência</div><div class="bd-bw"><div class="bd-b" id="bb-off"></div></div><div class="bd-pt" id="bp-off">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🌙</div><div class="bd-nm">Sono</div><div class="bd-bw"><div class="bd-b" id="bb-sleep"></div></div><div class="bd-pt" id="bp-sleep">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🌿</div><div class="bd-nm">Intestino</div><div class="bd-bw"><div class="bd-b" id="bb-bowel"></div></div><div class="bd-pt" id="bp-bowel">—</div></div>
+      <div class="bd-row"><div class="bd-ic">🔥</div><div class="bd-nm">Fome</div><div class="bd-bw"><div class="bd-b" id="bb-hunger"></div></div><div class="bd-pt" id="bp-hunger">—</div></div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         STEP 4B · SONO + INTESTINO
-    ══════════════════════════════════════ -->
-    <div class="step" id="s4b">
-      <div class="step-head">
-        <div class="step-tag">😴 Recuperação</div>
-        <h2 class="step-title">Sono e <em>intestino</em></h2>
-        <p class="step-sub">Dois indicadores que impactam diretamente sua composição e energia.</p>
-      </div>
+    <div class="success-note">✅ Dados registrados com sucesso.<br/>O Leo vai analisar e entrar em contato. 🔥</div>
 
-      <div class="card">
-        <div class="card-question">Como foi seu SONO essa semana?</div>
-        <div class="scale-labels"><span>😩 Péssimo</span><span>😴 Ótimo</span></div>
-        <div class="scale-grid" id="sg-sleep"></div>
-      </div>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="card-question">Como foi seu intestino? Evacuação diária?</div>
-        <div class="cardio-grid">
-          <button class="cardio-btn" id="bowel-daily" onclick="setBowel(5,'daily')">
-            <span class="cardio-icon">✅</span>
-            <span class="cardio-lbl">Sim, todos os dias</span>
-            <span class="cardio-pts">5pts</span>
-          </button>
-          <button class="cardio-btn" id="bowel-most" onclick="setBowel(3,'most')">
-            <span class="cardio-icon">🔄</span>
-            <span class="cardio-lbl">Na maioria dos dias</span>
-            <span class="cardio-pts">3pts</span>
-          </button>
-          <button class="cardio-btn" id="bowel-no" onclick="setBowel(0,'no')">
-            <span class="cardio-icon">❌</span>
-            <span class="cardio-lbl">Não foi regular</span>
-            <span class="cardio-pts">0pts</span>
-          </button>
-        </div>
-      </div>
+</div><!-- /.main -->
+</div><!-- /.app -->
 
-      <div class="err" id="e4b">⚠ Avalie sono e intestino para continuar.</div>
-      <div class="nav-area">
-        <button class="btn-next" onclick="v4b()">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo('4b')">← Voltar</button>
-      </div>
-    </div>
+<!-- MODAL Reflexão -->
+<div class="modal-overlay" id="modal-reflexao">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Check-in</div>
+    <div id="modal-body"></div>
+    <button class="modal-close" onclick="closeModal()">Fechar</button>
+  </div>
+</div>
 
-    <!-- ══════════════════════════════════════
-         STEP 5 · DIFICULDADES
-    ══════════════════════════════════════ -->
-    <div class="step" id="s5">
-      <div class="step-head">
-        <div class="step-tag">🎯 Reflexão</div>
-        <h2 class="step-title">O que <em>pesou</em><br>essa semana?</h2>
-        <p class="step-sub">Essas respostas guiam os ajustes do Leo. Seja direto.</p>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>Maior dificuldade da semana</label>
-          <textarea id="f-difficulty" placeholder="Ex: Perdi motivação para treinar na quarta, tive uma saída social no final de semana e escapuliu…"></textarea>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>Fatores externos que afetaram</label>
-          <textarea id="f-external" placeholder="Ex: Semana muito estressante no trabalho, noite de sono ruim, viagem de negócios…"></textarea>
-        </div>
-      </div>
-
-      <div class="nav-area">
-        <button class="btn-next" onclick="goTo(6)">
-          Próximo
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </button>
-        <button class="btn-back" onclick="goTo(4)">← Voltar</button>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════
-         STEP 6 · CONQUISTAS + ENVIO
-    ══════════════════════════════════════ -->
-    <div class="step" id="s6">
-      <div class="step-head">
-        <div class="step-tag">🏆 Conquistas</div>
-        <h2 class="step-title">O que você<br><em>mandou bem?</em></h2>
-        <p class="step-sub">Registrar as vitórias é tão importante quanto corrigir o que falhou.</p>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>Vitórias da semana</label>
-          <textarea id="f-wins" placeholder="Ex: Segui o plano de segunda a sexta sem escorregar, bati minha meta de proteína todos os dias…"></textarea>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="field">
-          <label>O que pode melhorar?</label>
-          <textarea id="f-improvements" placeholder="Ex: Preciso melhorar o sono, tomar mais água, ser mais consistente nos treinos de fim de semana…"></textarea>
-        </div>
-      </div>
-
-      <div class="card" style="border-color:var(--br2);background:rgba(255,92,26,.04)">
-        <div class="field">
-          <label>🙋 Precisa de ajuda do Leo?</label>
-          <textarea id="f-help" placeholder="Ex: Tenho dúvida sobre a suplementação pré-treino, posso trocar a refeição X por Y? Sentindo que…"></textarea>
-        </div>
-      </div>
-
-      <div class="err" id="e-submit">❌ Erro ao salvar. Verifique sua conexão e tente de novo.</div>
-      <div class="nav-area">
-        <button class="btn-next" id="btn-send" onclick="submit()">
-          <span id="send-txt">Enviar Check-in 🔥</span>
-          <span id="send-load" style="display:none;align-items:center;gap:10px;">
-            <div class="spinner"></div> Enviando…
-          </span>
-        </button>
-        <button class="btn-back" onclick="goTo(5)">← Voltar</button>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════
-         STEP 7 · SCORE REVEAL
-    ══════════════════════════════════════ -->
-    <div class="step" id="s7">
-      <div class="score-screen">
-        <div class="ring-shell fi d1">
-          <svg class="ring-svg" viewBox="0 0 190 190">
-            <circle class="ring-track" cx="95" cy="95" r="80"/>
-            <circle class="ring-arc" id="ringArc" cx="95" cy="95" r="80"/>
-          </svg>
-          <div class="ring-center">
-            <div class="score-num" id="scoreNum">0</div>
-            <div class="score-lbl">LAPIDADOS SCORE</div>
-          </div>
-        </div>
-
-        <div class="tier-name fi d2" id="tierName">—</div>
-        <p class="tier-msg fi d3" id="tierMsg">—</p>
-
-        <div class="breakdown fi d4">
-          <div class="bd-title">📊 Detalhamento do Score</div>
-          <div class="bd-row">
-            <span class="bd-icon">🥗</span>
-            <span class="bd-name">Dieta</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-diet"></div></div>
-            <span class="bd-pts" id="bp-diet">0/30</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">🏋️</span>
-            <span class="bd-name">Treino</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-train"></div></div>
-            <span class="bd-pts" id="bp-train">0/25</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">⚡</span>
-            <span class="bd-name">Energia</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-energy"></div></div>
-            <span class="bd-pts" id="bp-energy">0/20</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">🏃</span>
-            <span class="bd-name">Cardio</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-cardio"></div></div>
-            <span class="bd-pts" id="bp-cardio">0/10</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">🍽</span>
-            <span class="bd-name">Aderência</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-offplan"></div></div>
-            <span class="bd-pts" id="bp-offplan">0/10</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">😤</span>
-            <span class="bd-name">Saciedade</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-hunger"></div></div>
-            <span class="bd-pts" id="bp-hunger">0/5</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">😴</span>
-            <span class="bd-name">Sono</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-sleep"></div></div>
-            <span class="bd-pts" id="bp-sleep">0/10</span>
-          </div>
-          <div class="bd-row">
-            <span class="bd-icon">🫁</span>
-            <span class="bd-name">Intestino</span>
-            <div class="bd-bar-wrap"><div class="bd-bar" id="bb-bowel"></div></div>
-            <span class="bd-pts" id="bp-bowel">0/5</span
-          </div>
-        </div>
-
-        <p class="success-note fi d5">
-          ✅ Check-in enviado com sucesso!<br>
-          O Leo vai analisar seus dados e entrar em contato. 🔥
-        </p>
-
-        <!-- RANK BLOCK — preenchido via JS após fetch do histórico -->
-        <div id="rankBlock" style="display:none;margin-top:20px;padding:16px 18px;border-radius:14px;border:2px solid;text-align:center;animation:fadeUp .5s ease .8s both">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:6px" id="rankBlockLabel">SEU RANK ATUAL</div>
-          <div style="font-size:32px;margin-bottom:4px" id="rankBlockIcon">🪨</div>
-          <div style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px" id="rankBlockName">Bruto</div>
-          <div style="font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px" id="rankBlockPts">0 pts</div>
-          <div style="font-size:12px;opacity:.7;margin-bottom:10px" id="rankBlockNext"></div>
-          <div style="height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-bottom:14px">
-            <div id="rankBlockBar" style="height:100%;border-radius:3px;background:#fff;transition:width 1.2s ease .2s;width:0%"></div>
-          </div>
-          <div id="rankUpMsg" style="display:none;font-size:13px;line-height:1.6;margin-top:4px;padding:10px;background:rgba(255,255,255,.15);border-radius:9px;text-align:left"></div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /main -->
-</div><!-- /app -->
+<!-- Already done -->
+<div id="already-done">
+  <div style="font-size:52px;margin-bottom:16px">✅</div>
+  <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;text-transform:uppercase;color:#fff;margin-bottom:8px">Check-in Enviado!</div>
+  <div style="font-size:14px;color:rgba(255,255,255,.5);max-width:280px;line-height:1.65;margin-bottom:20px">Você já registrou sua evolução essa semana. O Leo já tem seus dados. 🔥</div>
+  <div id="ad-score" style="background:rgba(255,92,26,.1);border:1px solid rgba(255,92,26,.25);border-radius:16px;padding:20px 26px;margin-bottom:18px;text-align:center"></div>
+  <div style="background:rgba(255,255,255,.05);border-radius:12px;padding:12px 18px;font-size:12px;color:rgba(255,255,255,.35)">Volte semana que vem para continuar acumulando pontos.</div>
+</div>
 
 <script>
-// ╔══════════════════════════════════════════╗
-// ║  ⚠️  SUBSTITUIR SUAS CREDENCIAIS AQUI   ║
-// ╚══════════════════════════════════════════╝
-const SUPABASE_URL = 'https://guxsfjfqywebglymasao.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_NAm0P6HDQvJ0jODRJEdZ5A_2zg9BSDw';
-// ═══════════════════════════════════════════
+/* ════════════════════════════════════════════════
+   🔑 CREDENCIAIS
+   ════════════════════════════════════════════════ */
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const GEMINI_KEY   = 'YOUR_GEMINI_API_KEY';
+// Obter chave gratuita → https://aistudio.google.com/app/apikey
 
-const RANKS_CFG = [
-  {id:'bruto',      min:0,    max:199,  icon:'🪨', name:'Bruto',     color:'#6b7280', bg:'#1f2937'},
-  {id:'destravado', min:200,  max:499,  icon:'🧠', name:'Destravado',color:'#60a5fa', bg:'#1e3a5f'},
-  {id:'afiado',     min:500,  max:999,  icon:'⚡', name:'Afiado',    color:'#a78bfa', bg:'#2e1065'},
-  {id:'imparavel',  min:1000, max:1999, icon:'🔥', name:'Imparável', color:'#fb923c', bg:'#431407'},
-  {id:'lapidado',   min:2000, max:1e9,  icon:'👑', name:'Lapidado',  color:'#fcd34d', bg:'#78350f'},
+/* ════════════════════════════════════════════════
+   RANKS & BADGES
+   ════════════════════════════════════════════════ */
+const RANKS = [
+  { name:'BRUTO',      icon:'🪨', min:0,    max:199,      color:'#9ca3af', glow:'rgba(156,163,175,.25)' },
+  { name:'DESTRAVADO', icon:'🧠', min:200,  max:499,      color:'#60a5fa', glow:'rgba(96,165,250,.25)'  },
+  { name:'AFIADO',     icon:'⚡', min:500,  max:999,      color:'#a78bfa', glow:'rgba(167,139,250,.25)' },
+  { name:'IMPARÁVEL',  icon:'🔥', min:1000, max:1999,     color:'#fb923c', glow:'rgba(251,146,60,.25)'  },
+  { name:'LAPIDADO',   icon:'👑', min:2000, max:Infinity, color:'#fcd34d', glow:'rgba(252,211,77,.25)'  },
 ];
-const RANK_MSGS = {
-  bruto:'Você entrou no jogo agora. E aqui não é sobre começar motivado… é sobre não voltar pro padrão de antes.\n\nTeu foco agora é simples: aparecer toda semana. O resto a gente ajusta.',
-  destravado:'Você saiu do automático. E isso já coloca você na frente da maioria.\n\nAgora começa a parte importante: entender o que funciona no seu corpo, criar consistência.',
-  afiado:'Agora começa a ficar diferente. Você não tá só tentando… você tá executando.\n\nConsistência cria resultado. E você já entrou nessa zona.',
-  imparavel:'Aqui já não é mais sobre "seguir plano". É sobre controle.\n\nSeu corpo começa a responder quando suas decisões param de oscilar.',
-  lapidado:'Pouca gente sustenta o que você sustentou até aqui.\n\nVocê não chegou aqui por motivação. Chegou porque começou a agir diferente… mesmo quando não tava com vontade.\n\nIsso é comportamento. Isso é padrão.',
-};
-const PENALTY_PTS = 10;
-const PENALTY_DAYS = 6;
+const getRank    = p => RANKS.find(r => p >= r.min && p <= r.max) || RANKS[0];
+const getNextRank= p => { const i=RANKS.findIndex(r=>p>=r.min&&p<=r.max); return i<RANKS.length-1?RANKS[i+1]:null; };
 
-function getRankCfg(pts){ return RANKS_CFG.slice().reverse().find(r=>pts>=r.min)||RANKS_CFG[0]; }
-function rankProg(pts,r){
-  if(r.max>=1e9)return{pct:100,next:0,label:'Rank máximo atingido!'};
-  const pct=Math.min(100,Math.round((pts-r.min)/(r.max-r.min+1)*100));
-  const next=r.max+1-pts;
-  const nr=getRankCfg(r.max+1);
-  return{pct,next,label:next+'pts para '+nr.icon+' '+nr.name};
+const BADGE_DEFS = [
+  // CHECK-IN
+  { id:'first',    icon:'🌱', name:'Primeira Semana',       cat:'Check-in',     fn:(h)=>h.length>=1 },
+  { id:'s4',       icon:'🔥', name:'4 Semanas Seguidas',   cat:'Check-in',     fn:(_,__,s)=>s>=4 },
+  { id:'s8',       icon:'💪', name:'8 Semanas Seguidas',   cat:'Check-in',     fn:(_,__,s)=>s>=8 },
+  { id:'s12',      icon:'👑', name:'12 Semanas Seguidas',  cat:'Check-in',     fn:(_,__,s)=>s>=12 },
+  // CONSISTÊNCIA
+  { id:'diet4',    icon:'🥗', name:'Dieta ≥8 · 4 Semanas', cat:'Consistência', fn:(h)=>h.length>=4&&h.slice(0,4).filter(c=>c.diet_score>=8).length>=4 },
+  { id:'train4',   icon:'🏋️', name:'Treino ≥8 · 4 Semanas',cat:'Consistência', fn:(h)=>h.length>=4&&h.slice(0,4).filter(c=>c.training_score>=8).length>=4 },
+  { id:'cardiomax',icon:'🏃', name:'Cardio Completo',       cat:'Consistência', fn:(h)=>h.some(c=>c.cardio_score===10) },
+  { id:'sleep3',   icon:'😴', name:'Sono Consistente',      cat:'Consistência', fn:(h)=>h.length>=3&&h.slice(0,3).filter(c=>c.sleep_score>=8).length>=3 },
+  // EVOLUÇÃO
+  { id:'p100',     icon:'⚡', name:'100 Pontos',            cat:'Evolução',     fn:(_,t)=>t>=100 },
+  { id:'p500',     icon:'🚀', name:'500 Pontos',            cat:'Evolução',     fn:(_,t)=>t>=500 },
+  { id:'p1000',    icon:'💎', name:'1000 Pontos',           cat:'Evolução',     fn:(_,t)=>t>=1000 },
+  { id:'rafiado',  icon:'⚡', name:'Rank AFIADO',           cat:'Evolução',     fn:(_,t)=>t>=500 },
+  { id:'rimpar',   icon:'🔥', name:'Rank IMPARÁVEL',        cat:'Evolução',     fn:(_,t)=>t>=1000 },
+  // COMPORTAMENTO
+  { id:'nomiss',   icon:'✅', name:'Sem Falhar Check-in',   cat:'Comportamento',fn:(_,__,s)=>s>=4 },
+  { id:'adher',    icon:'🎯', name:'Alta Aderência',        cat:'Comportamento',fn:(h)=>h.length>=4&&h.slice(0,4).reduce((a,c)=>a+c.diet_score,0)/4>=7 },
+];
+
+/* ════════════════════════════════════════════════
+   OPTION DATA
+   ════════════════════════════════════════════════ */
+const CARDIO_OPTS = [
+  { icon:'✅', lb:'Sim, todos',         sb:'Cardio completo', pt:'+10', val:10 },
+  { icon:'🔄', lb:'Sim, mas não todos', sb:'Fez parte',       pt:'+5',  val:5  },
+  { icon:'❌', lb:'Não fiz',            sb:'Sem cardio',      pt:'+0',  val:0  },
+  { icon:'🏃', lb:'Sem meta de cardio', sb:'Foco no treino',  pt:'+10', val:10 },
+];
+const BOWEL_OPTS = [
+  { icon:'✅', lb:'Sim, todos os dias',  sb:'Evacuação diária', pt:'+5', val:5 },
+  { icon:'🔄', lb:'Na maioria dos dias', sb:'Quase todo dia',   pt:'+3', val:3 },
+  { icon:'❌', lb:'Não foi regular',     sb:'Com dificuldade',  pt:'+0', val:0 },
+];
+
+const CARDIO_LBL = { 10:'Completo', 5:'1 sessão', 0:'Nenhum' };
+const SLEEP_LBL  = { 10:'8+ horas', 7:'6–8h',     3:'<6h',  0:'Irregular' };
+const BOWEL_LBL  = { 5:'Regular',   3:'Irregular', 0:'Ruim'  };
+
+/* ════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════ */
+let   sb     = null;
+const params = new URLSearchParams(location.search);
+const PID    = params.get('pid') || params.get('patient_id');
+
+function initSB() {
+  if (!SUPABASE_URL.startsWith('https://') || SUPABASE_KEY === 'YOUR_SUPABASE_ANON_KEY') return false;
+  try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); return true; }
+  catch(e) { console.error('Supabase init error:', e); return false; }
 }
 
-async function fetchAndShowRank(patientId, newScore) {
-  if (!patientId) return;
-  try {
-    // fetch all checkins for this patient
-    const { data: allC } = await sb.from('checkins')
-      .select('lapidados_score, week_number, year, created_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false });
-
-    // fetch invites to calc penalty
-    const { data: invs } = await sb.from('checkin_invites')
-      .select('sent_at, week_number, year')
-      .eq('patient_id', patientId);
-
-    const allCheckins = allC || [];
-    const invites     = invs  || [];
-    const now         = new Date();
-
-    const base = allCheckins.reduce((s,c) => s + (c.lapidados_score||0), 0);
-    const pen  = invites.filter(inv => {
-      const d = Math.floor((now - new Date(inv.sent_at)) / 86400000);
-      if (d < PENALTY_DAYS) return false;
-      return !allCheckins.some(c => c.week_number===inv.week_number && c.year===inv.year);
-    }).length;
-    const totalPts = Math.max(0, base - pen * PENALTY_PTS);
-
-    const prevPts = Math.max(0, totalPts - newScore); // before this check-in
-    const prevRank = getRankCfg(prevPts);
-    const newRank  = getRankCfg(totalPts);
-    const rankChanged = newRank.id !== prevRank.id;
-
-    const r    = newRank;
-    const prog = rankProg(totalPts, r);
-
-    const block = document.getElementById('rankBlock');
-    block.style.display     = '';
-    block.style.borderColor = r.color;
-    block.style.background  = r.bg;
-    block.style.color       = '#fff';
-
-    document.getElementById('rankBlockIcon').textContent = r.icon;
-    document.getElementById('rankBlockName').textContent = r.name.toUpperCase();
-    document.getElementById('rankBlockPts').textContent  = totalPts + ' pts acumulados';
-    document.getElementById('rankBlockNext').textContent = prog.label;
-    document.getElementById('rankBlockLabel').textContent = rankChanged
-      ? '🎉 NOVO RANK DESBLOQUEADO!'
-      : 'SEU RANK ATUAL';
-
-    setTimeout(() => {
-      document.getElementById('rankBlockBar').style.width = prog.pct + '%';
-    }, 300);
-
-    if (rankChanged) {
-      const msgEl  = document.getElementById('rankUpMsg');
-      const msgTxt = RANK_MSGS[r.id] || '';
-      msgEl.style.display = '';
-      msgEl.textContent   = msgTxt;
-      // confetti-like emoji burst
-      const burst = document.createElement('div');
-      burst.style.cssText = 'position:fixed;top:0;left:0;right:0;text-align:center;font-size:28px;pointer-events:none;z-index:999;animation:confettiFall 2.5s ease forwards';
-      burst.textContent = '🎊 🏆 🎉 '+r.icon+' 🎉 🏆 🎊';
-      document.body.appendChild(burst);
-      setTimeout(() => burst.remove(), 2600);
-    }
-  } catch(e) {
-    console.warn('fetchRank error:', e);
-  }
+function isoWeek(d = new Date()) {
+  const u = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  u.setUTCDate(u.getUTCDate() + 4 - (u.getUTCDay() || 7));
+  const ys = new Date(Date.UTC(u.getUTCFullYear(), 0, 1));
+  return { week: Math.ceil((((u - ys) / 86400000) + 1) / 7), year: u.getUTCFullYear() };
 }
+const { week: CUR_WEEK, year: CUR_YEAR } = isoWeek();
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-/* ── State ─────────────────────────────── */
-const D = {
-  patient_id:      null,
-  weight:          null,
-  height:          null,
-  diet_score:      null,
-  off_plan_meals:  0,
-  training_score:  null,
-  cardio_score:    null,
-  energy_level:    null,
-  hunger_level:    null,
-  sleep_score:     null,
-  bowel_score:     null,
-  main_difficulty: '',
-  external_factors:'',
-  wins:            '',
-  improvements:    '',
-  needs_help:      '',
-  week_number:     null,
-  year:            null,
+let D = {
+  patient_id: PID, week_number: CUR_WEEK, year: CUR_YEAR,
+  weight: null, height: null,
+  diet_score: null, off_plan_meals: 0,
+  training_score: null, cardio_score: null,
+  hunger_level: null, energy_level: null,
+  sleep_score: null, bowel_score: null,
+  main_difficulty:'', external_factors:'',
+  wins:'', improvements:'', needs_help:'',
 };
+
+let ST = {
+  name:'Atleta', total_points:0, streak:0, best_streak:0,
+  last_week_pts:0, avg_diet:0, avg_train:0, avg_sleep:0,
+  history:[], badges:[],
+  ai_focus:null, ai_insight:null,
+  focus_fallback:'Mantenha consistência em todos os pilares essa semana.',
+};
+
+let NEW_SCORE = null;
 let cur = 0;
-const TOTAL = 7;
 
-/* ── URL params + fetch name & rank ─────────────────────── */
-(async function () {
-  const p    = new URLSearchParams(window.location.search);
-  D.patient_id = p.get('patient_id') || null;
-
-  // ── Duplicate check: already answered this week? ──
-  if (D.patient_id) {
-    try {
-      const nowC = new Date();
-      // Get start_date for relative week calc
-      const { data: patForWeek } = await sb
-        .from('patients')
-        .select('start_date')
-        .eq('id', D.patient_id)
-        .single();
-      let wkNum, wkYr;
-      if (patForWeek?.start_date) {
-        const st = new Date(patForWeek.start_date + 'T00:00:00');
-        const dd = Math.floor((nowC - st) / 86400000);
-        wkNum = Math.max(1, Math.ceil((dd + 1) / 7));
-        wkYr  = st.getFullYear();
-      } else {
-        const jan1C = new Date(nowC.getFullYear(), 0, 1);
-        wkNum = Math.ceil(((nowC - jan1C) / 86400000 + jan1C.getDay() + 1) / 7);
-        wkYr  = nowC.getFullYear();
-      }
-      const { data: existing } = await sb
-        .from('checkins')
-        .select('id, created_at')
-        .eq('patient_id', D.patient_id)
-        .eq('week_number', wkNum)
-        .eq('year', wkYr)
-        .limit(1);
-      if (existing && existing.length > 0) {
-        // Show already-answered screen instead of welcome
-        document.getElementById('already-done').style.display = 'flex';
-        document.getElementById('app').style.display = 'none';
-      }
-    } catch(e) { console.warn('dupe check failed:', e); }
+/* ════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════ */
+async function init() {
+  if (!initSB()) {
+    // Sem credenciais válidas → renderiza painel de demonstração
+    renderDashboard(); return;
   }
-
-  // Patient-relative week (from start_date, every 7 days = +1 week)
-  // Fetched below after getting patient data; fallback to ISO week
-  const now = new Date();
-  let week, weekYear;
-  // Will be set after fetching patient start_date below
-
-  if (!D.patient_id) return;
-
+  if (!PID) { renderDashboard(); return; }
   try {
-    // 1. Fetch patient name + start_date from DB
-    const { data: pat } = await sb
-      .from('patients')
-      .select('name, start_date')
-      .eq('id', D.patient_id)
-      .single();
+    // Name lookup (graceful)
+    try {
+      const { data:pt } = await sb.from('patients').select('name').eq('id',PID).single();
+      if (pt?.name) ST.name = pt.name.split(' ')[0];
+    } catch(_) {}
 
-    const firstName = pat?.name?.trim().split(' ')[0] || p.get('name') || null;
-    if (firstName) {
-      document.getElementById('pName').textContent = firstName;
+    const { data:history } = await sb
+      .from('checkins').select('*').eq('patient_id',PID)
+      .order('created_at',{ ascending:false }).limit(24);
+
+    ST.history = history || [];
+
+    // Already answered?
+    if (ST.history.some(c => c.week_number == CUR_WEEK && c.year == CUR_YEAR)) {
+      showAlreadyDone(); return;
     }
 
-    // Calculate patient-relative week from start_date
-    if (pat?.start_date) {
-      const start = new Date(pat.start_date + 'T00:00:00');
-      const daysDiff = Math.floor((now - start) / 86400000);
-      week = Math.max(1, Math.ceil((daysDiff + 1) / 7));
-      weekYear = start.getFullYear();
-    } else {
-      // Fallback to ISO week
-      const jan1 = new Date(now.getFullYear(), 0, 1);
-      week = Math.ceil(((now - jan1) / 86400000 + jan1.getDay() + 1) / 7);
-      weekYear = now.getFullYear();
-    }
-    D.week_number = week;
-    D.year = weekYear;
-    document.getElementById('weekNum').textContent = week;
-
-    // 2. Fetch all checkins to calculate accumulated points + rank
-    const { data: allC } = await sb
-      .from('checkins')
-      .select('lapidados_score, week_number, year, created_at')
-      .eq('patient_id', D.patient_id)
-      .order('created_at', { ascending: false });
-
-    const { data: invs } = await sb
-      .from('checkin_invites')
-      .select('sent_at, week_number, year')
-      .eq('patient_id', D.patient_id);
-
-    const allCheckins = allC || [];
-    const invites     = invs  || [];
-    const nowD        = new Date();
-
-    const base = allCheckins.reduce((s, c) => s + (c.lapidados_score || 0), 0);
-    const pen  = invites.filter(inv => {
-      const d = Math.floor((nowD - new Date(inv.sent_at)) / 86400000);
-      if (d < PENALTY_DAYS) return false;
-      return !allCheckins.some(c => c.week_number === inv.week_number && c.year === inv.year);
-    }).length;
-    const totalPts = Math.max(0, base - pen * PENALTY_PTS);
-
-    if (allCheckins.length > 0 || totalPts > 0) {
-      const r = getRankCfg(totalPts);
-      const wrap = document.getElementById('welcomeRankWrap');
-      const badge = document.getElementById('welcomeRankBadge');
-      wrap.style.display = '';
-      badge.style.borderColor = r.color;
-      badge.style.background  = r.bg;
-      badge.style.color       = r.color;
-      document.getElementById('welcomeRankIcon').textContent = r.icon;
-      document.getElementById('welcomeRankName').textContent = r.name.toUpperCase();
-      document.getElementById('welcomeRankPts').textContent  = totalPts + ' pts';
-    }
+    computeStats();
+    renderDashboard();
+    if (GEMINI_KEY && GEMINI_KEY !== 'YOUR_GEMINI_API_KEY') fetchAI();
   } catch(e) {
-    // silently fail — fallback to URL name param
-    const urlName = p.get('name');
-    if (urlName) document.getElementById('pName').textContent = decodeURIComponent(urlName);
-    console.warn('fetch patient/rank error:', e);
+    console.error(e);
+    renderDashboard();
   }
-})();
+}
 
-/* ── Build scale grids ──────────────────── */
-function buildScale(id, key) {
-  const grid = document.getElementById(id);
-  for (let i = 0; i <= 10; i++) {
-    const b = document.createElement('button');
-    b.type       = 'button';
-    b.className  = 'sc-btn';
-    b.dataset.val = i;
-    b.textContent = i;
-    b.addEventListener('click', () => {
-      grid.querySelectorAll('.sc-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      D[key] = i;
+/* ════════════════════════════════════════════════
+   COMPUTE STATS
+   ════════════════════════════════════════════════ */
+function computeStats() {
+  const h = ST.history;
+  if (!h.length) return;
+  ST.total_points  = h.reduce((s,c) => s + (c.lapidados_score||0), 0);
+  ST.last_week_pts = h[0]?.lapidados_score || 0;
+  ST.streak        = calcStreak(h);
+  ST.best_streak   = calcBestStreak(h);
+  const n = h.length;
+  ST.avg_diet  = +(h.reduce((s,c)=>s+(c.diet_score||0),0)/n).toFixed(1);
+  ST.avg_train = +(h.reduce((s,c)=>s+(c.training_score||0),0)/n).toFixed(1);
+  ST.avg_sleep = +(h.reduce((s,c)=>s+(c.sleep_score||0),0)/n).toFixed(1);
+  ST.badges    = BADGE_DEFS.map(b=>({...b, unlocked: b.fn(h, ST.total_points, ST.streak)}));
+  ST.focus_fallback = autoFocus(h);
+}
+
+function wk(c) { return (c.year||2024)*100 + (c.week_number||1); }
+
+function calcStreak(h) {
+  if (!h.length) return 0;
+  let s = 1;
+  for (let i = 1; i < h.length; i++) {
+    const d = wk(h[i-1]) - wk(h[i]);
+    if (d === 1 || d === -51) s++; else break;
+  }
+  return s;
+}
+
+function calcBestStreak(h) {
+  if (!h.length) return 0;
+  let best = 1, run = 1;
+  for (let i = 1; i < h.length; i++) {
+    const d = wk(h[i-1]) - wk(h[i]);
+    if (d === 1 || d === -51) { run++; best = Math.max(best,run); } else run = 1;
+  }
+  return best;
+}
+
+function autoFocus(h) {
+  if (!h.length) return 'Mantenha consistência em todos os pilares essa semana.';
+  const l = h[0];
+  const mt = [
+    { k:'diet_score',     lbl:'dieta',   v:l.diet_score||0,     mx:10 },
+    { k:'training_score', lbl:'treino',  v:l.training_score||0,  mx:10 },
+    { k:'sleep_score',    lbl:'sono',    v:l.sleep_score||0,     mx:10 },
+    { k:'energy_level',   lbl:'energia', v:l.energy_level||0,    mx:10 },
+    { k:'cardio_score',   lbl:'cardio',  v:l.cardio_score||0,    mx:10 },
+  ];
+  const w = mt.reduce((a,m)=>(m.v/m.mx)<(a.v/a.mx)?m:a);
+  const mp = {
+    diet_score:     'Melhorar a adesão ao plano alimentar essa semana.',
+    training_score: 'Manter consistência nos treinos de musculação.',
+    sleep_score:    'Priorizar o sono para otimizar recuperação e performance.',
+    energy_level:   'Investigar o que está drenando sua energia — sono, dieta ou estresse?',
+    cardio_score:   'Incluir pelo menos uma sessão de cardio na rotina.',
+  };
+  return mp[w.k] || 'Mantenha consistência em todos os pilares.';
+}
+
+/* ════════════════════════════════════════════════
+   GEMINI AI
+   ════════════════════════════════════════════════ */
+async function fetchAI() {
+  const h = ST.history.slice(0,4);
+  if (!h.length) return;
+  const hs = h.map((c,i)=>`Semana ${i===0?'mais recente':i+' atrás'}: Dieta ${c.diet_score}/10, Treino ${c.training_score}/10, Cardio ${c.cardio_score||0}pts, Sono ${c.sleep_score||0}/10, Energia ${c.energy_level||0}/10, Score ${c.lapidados_score}/100`).join('\n');
+  const prompt = `Você é assistente de nutrição esportiva do Lapidados Club. Analise os dados e responda APENAS com JSON sem markdown:\n${hs}\n\nGere:\n{"focus":"Uma frase sobre o foco da semana (max 10 palavras)","insight":"Insight comportamental em 1-2 frases curtas e diretas"}`;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:.6,maxOutputTokens:200}})
     });
-    grid.appendChild(b);
+    const data = await res.json();
+    const txt  = data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    const ai   = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    ST.ai_focus   = ai.focus   || null;
+    ST.ai_insight = ai.insight || null;
+    const ft = document.getElementById('focus-text');
+    const fi = document.getElementById('focus-insight');
+    const fl = document.getElementById('focus-loading');
+    if (ft && ST.ai_focus)   { ft.textContent = ST.ai_focus; ft.style.opacity='1'; }
+    if (fi && ST.ai_insight) { fi.textContent = ST.ai_insight; fi.style.display='block'; }
+    if (fl) fl.style.display='none';
+  } catch(e) {
+    console.warn('Gemini fallback:', e);
+    const fl = document.getElementById('focus-loading');
+    if (fl) fl.style.display='none';
   }
 }
-buildScale('sg-diet',     'diet_score');
-buildScale('sg-training', 'training_score');
-buildScale('sg-energy',   'energy_level');
-buildScale('sg-hunger',   'hunger_level');
-buildScale('sg-sleep',    'sleep_score');
 
-/* ── Stepper ────────────────────────────── */
-function stp(k, d) {
-  if (k === 'off') {
-    D.off_plan_meals = Math.max(0, D.off_plan_meals + d);
-    document.getElementById('off-val').textContent = D.off_plan_meals;
+/* ════════════════════════════════════════════════
+   RENDER DASHBOARD
+   ════════════════════════════════════════════════ */
+function renderDashboard() {
+  document.getElementById('dash-loading').style.display = 'none';
+  const el  = document.getElementById('dash-content');
+  el.style.display = 'block';
+  const rank = getRank(ST.total_points);
+  const next = getNextRank(ST.total_points);
+  const pct  = next ? Math.round(((ST.total_points - rank.min) / (next.min - rank.min)) * 100) : 100;
+  const h    = ST.history;
+
+  // Apply rank CSS vars
+  document.documentElement.style.setProperty('--rank-color', rank.color);
+  document.documentElement.style.setProperty('--rank-glow',  rank.glow);
+
+  el.innerHTML = `
+    ${rHero(rank)}
+    ${rProgress(rank, next, pct)}
+    ${rCTA()}
+    ${h.length >= 2 ? rEvolution(h[0], h[1]) : ''}
+    ${rFocus()}
+    ${rJourney(rank)}
+    ${rStreakTracker()}
+    ${rBadges()}
+    ${h.length ? rStats() : ''}
+    ${h.length ? rHistory(h) : ''}
+    <div style="height:10px"></div>
+  `;
+  setTimeout(() => {
+    const f = document.getElementById('rp-fill');
+    if (f) f.style.width = pct + '%';
+  }, 350);
+}
+
+function rHero(rank) {
+  const lws = ST.last_week_pts;
+  return `
+    <div class="hero fi d1">
+      <div class="hero-pre">Lapidados Club</div>
+      <h1 class="hero-title">${ST.name},<br><em>sua evolução continua.</em></h1>
+      <div class="rank-hero" style="--rank-color:${rank.color};--rank-glow:${rank.glow}">
+        <div class="rank-badge-row">
+          <div class="rank-icon">${rank.icon}</div>
+          <div class="rank-info">
+            <div class="rank-name" style="color:${rank.color}">${rank.name}</div>
+            <div class="rank-sub">Rank atual</div>
+          </div>
+          <div style="text-align:right">
+            <div class="rank-pts-main">${ST.total_points}</div>
+            <div class="rank-pts-label">pts acumulados</div>
+          </div>
+        </div>
+        <div class="rank-meta-row">
+          ${ST.streak>0?`<div class="rmi o">🔥 ${ST.streak} sem. seguidas</div>`:''}
+          ${lws>0?`<div class="rmi g">+${lws} pts semana passada</div>`:''}
+          ${!ST.streak&&!lws?'<div class="rmi">Primeiro check-in! 🚀</div>':''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function rProgress(rank, next, pct) {
+  if (!next) return `
+    <div class="rp-card fi d2">
+      <div class="rp-header"><span class="rp-label">Progressão</span><span class="rp-next" style="color:#fcd34d">👑 LAPIDADO</span></div>
+      <div class="rp-track"><div class="rp-fill" id="rp-fill" style="width:100%"></div></div>
+      <div class="rp-foot"><span>Rank <strong>máximo</strong> atingido 🏆</span></div>
+    </div>`;
+  const rem = next.min - ST.total_points;
+  return `
+    <div class="rp-card fi d2">
+      <div class="rp-header">
+        <span class="rp-label">Próximo rank</span>
+        <span class="rp-next" style="color:${next.color}">${next.icon} ${next.name}</span>
+      </div>
+      <div class="rp-track"><div class="rp-fill" id="rp-fill" style="width:0%"></div></div>
+      <div class="rp-foot">
+        <span><strong>${ST.total_points}</strong> / ${next.min} pts</span>
+        <span><strong>${rem}</strong> pts para ${next.name}</span>
+      </div>
+    </div>`;
+}
+
+function rEvolution(curr, prev) {
+  const mt = [
+    { ic:'🥗', nm:'Dieta',    c:curr.diet_score||0,     p:prev.diet_score||0,     hi:true  },
+    { ic:'🏋️', nm:'Treino',   c:curr.training_score||0, p:prev.training_score||0, hi:true  },
+    { ic:'🏃', nm:'Cardio',   c:curr.cardio_score||0,   p:prev.cardio_score||0,   hi:true  },
+    { ic:'🌙', nm:'Sono',     c:curr.sleep_score||0,    p:prev.sleep_score||0,    hi:true  },
+    { ic:'⚡', nm:'Energia',  c:curr.energy_level||0,   p:prev.energy_level||0,   hi:true  },
+    { ic:'🔥', nm:'Fome',     c:curr.hunger_level||0,   p:prev.hunger_level||0,   hi:false },
+    { ic:'🍽️', nm:'Aderência',c:Math.max(0,10-curr.off_plan_meals*2)||0,p:Math.max(0,10-prev.off_plan_meals*2)||0,hi:true},
+  ];
+  const rows = mt.map(m=>{
+    const up = m.hi ? m.c>m.p : m.c<m.p;
+    const dn = m.hi ? m.c<m.p : m.c>m.p;
+    return `<div class="evo-row">
+      <div class="evo-ic">${m.ic}</div><div class="evo-nm">${m.nm}</div>
+      <div class="evo-pv">${m.p}</div>
+      <div class="evo-ar" style="color:${up?'var(--green)':dn?'var(--red)':'var(--t3)'}">${up?'↑':dn?'↓':'→'}</div>
+      <div class="evo-cv ${up?'up':dn?'dn':'sm'}">${m.c}</div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="sh fi d3"><span class="sh-title">↗ Evolução da semana</span><div class="sh-line"></div></div>
+    <div class="gc fi d3" style="padding:14px 16px">${rows}</div>`;
+}
+
+function rFocus() {
+  const isAI = GEMINI_KEY && GEMINI_KEY !== 'YOUR_GEMINI_API_KEY';
+  return `
+    <div class="sh fi d3"><span class="sh-title">🎯 Foco da semana</span><div class="sh-line"></div></div>
+    <div class="focus-card fi d3">
+      <div class="focus-tag">🎯 FOCO DA SEMANA</div>
+      ${isAI?`<div class="focus-loading" id="focus-loading"><div class="sp" style="width:12px;height:12px;border-width:2px"></div> Analisando seus dados com IA...</div>`:''}
+      <div class="focus-text" id="focus-text" style="${isAI?'opacity:.45':''}">${ST.focus_fallback}</div>
+      <div class="focus-insight" id="focus-insight"></div>
+    </div>`;
+}
+
+function rCTA() {
+  return `
+    <div class="fi d2" style="padding:4px 0 12px">
+      <button class="btn-missao" onclick="goTo(1)">🔥 Iniciar Missão Semanal</button>
+      <div class="cta-sub">~2 min · Score ao final · Semana ${CUR_WEEK}</div>
+    </div>`;
+}
+
+function rStreakTracker() {
+  const s = ST.streak;
+  // Quais conquistas de streak estão a 1 semana de desbloquear
+  const targets = [
+    { needed: 4,  name: '4 semanas seguidas',  icon: '🔥' },
+    { needed: 8,  name: '8 semanas seguidas',  icon: '💪' },
+    { needed: 12, name: '12 semanas seguidas', icon: '👑' },
+  ];
+  const close = targets.find(t => s === t.needed - 1);
+  if (!close) return '';
+  return `
+    <div class="streak-tracker fi d4">
+      <div class="st-icon">⚡</div>
+      <div class="st-body">
+        <div class="st-title">Você está quase lá!</div>
+        <div class="st-msg">Mais <strong>1 semana</strong> e você desbloqueia: <strong>${close.icon} ${close.name}</strong></div>
+      </div>
+    </div>`;
+}
+
+function rJourney(curRank) {
+  const ci = RANKS.findIndex(r=>r.name===curRank.name);
+  const html = RANKS.map((r,i)=>{
+    const done = i<ci, isCur = i===ci;
+    const nc = done?'done':isCur?'cur':'locked';
+    const nn = done?'done':isCur?'cur':'';
+    const ck = done?'<div class="jnc-ck">✓</div>':'';
+    const line = i<RANKS.length-1?`<div class="jl ${done?'done':''}"></div>`:'';
+    return `
+      <div class="jn">
+        <div class="jnc ${nc}" style="${isCur?`border-color:${r.color};box-shadow:0 0 22px ${r.glow};background:rgba(255,255,255,.04)`:''}">${r.icon}${ck}</div>
+        <div class="jnn ${nn}" style="${isCur?`color:${r.color}`:''}">${r.name}</div>
+      </div>${line}`;
+  }).join('');
+  return `
+    <div class="sh fi d4"><span class="sh-title">🗺️ Sua jornada</span><div class="sh-line"></div></div>
+    <div class="gc fi d4" style="padding:14px 16px">
+      <div class="journey-track">${html}</div>
+      <div style="font-size:10.5px;color:var(--t3);text-align:center;margin-top:10px;line-height:1.5">
+        Pontos se acumulam semana a semana · Sem missão = sem evolução
+      </div>
+    </div>`;
+}
+
+function rBadges() {
+  const badges = ST.badges.length ? ST.badges : BADGE_DEFS.map(b=>({...b,unlocked:false}));
+  const cats = [...new Set(badges.map(b=>b.cat))];
+  const html = cats.map(cat=>{
+    const items = badges.filter(b=>b.cat===cat).map(b=>`
+      <div class="bi ${b.unlocked?'on':''}">
+        ${b.unlocked?'<div class="bi-dot"></div>':''}
+        <div class="bi-ic">${b.icon}</div>
+        <div class="bi-nm">${b.name}</div>
+      </div>`).join('');
+    return `<div class="badges-cat">${cat}</div><div class="badges-grid">${items}</div>`;
+  }).join('');
+  return `
+    <div class="sh fi d4"><span class="sh-title">🏅 Conquistas</span><div class="sh-line"></div></div>
+    <div class="fi d4" style="margin-bottom:14px">${html}</div>`;
+}
+
+function rStats() {
+  const h = ST.history;
+  return `
+    <div class="sh fi d5"><span class="sh-title">📊 Sua evolução</span><div class="sh-line"></div></div>
+    <div class="stats-grid fi d5">
+      <div class="stat-c"><div class="stat-ic">📋</div><div class="stat-v">${h.length}</div><div class="stat-l">Check-ins</div></div>
+      <div class="stat-c"><div class="stat-ic">🔥</div><div class="stat-v">${ST.total_points}</div><div class="stat-l">Pts acum.</div></div>
+      <div class="stat-c"><div class="stat-ic">⚡</div><div class="stat-v">${ST.best_streak}</div><div class="stat-l">Melhor streak</div></div>
+      <div class="stat-c"><div class="stat-ic">🥗</div><div class="stat-v">${ST.avg_diet}</div><div class="stat-l">Média dieta</div></div>
+      <div class="stat-c"><div class="stat-ic">🏋️</div><div class="stat-v">${ST.avg_train}</div><div class="stat-l">Média treino</div></div>
+      <div class="stat-c"><div class="stat-ic">🌙</div><div class="stat-v">${ST.avg_sleep}</div><div class="stat-l">Média sono</div></div>
+    </div>`;
+}
+
+function rHistory(h) {
+  const items = h.slice(0,5).map((c,i)=>{
+    const prev  = h[i+1];
+    const delta = prev ? c.lapidados_score - prev.lapidados_score : null;
+    const dc    = delta===null?'sm':delta>0?'up':delta<0?'dn':'sm';
+    const ds    = delta===null?'Primeira semana':delta>0?`↑ +${delta} pts`:delta<0?`↓ ${delta} pts`:'→ Igual';
+    const wl    = c.week_number ? `Sem ${c.week_number}` : new Date(c.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+    return `
+      <div class="hist-item">
+        <div class="hist-wk">${wl}<br>${c.year||''}</div>
+        <div class="hist-sc">${c.lapidados_score||0}<span>/100</span></div>
+        <div class="hist-evo"><div class="hist-dt ${dc}">${ds}</div></div>
+        <button class="hist-btn" onclick="openReflexao(${i})">Ver</button>
+      </div>`;
+  }).join('');
+  return `
+    <div class="sh fi d5"><span class="sh-title">📅 Histórico</span><div class="sh-line"></div></div>
+    <div class="fi d5" style="margin-bottom:14px">${items}</div>`;
+}
+
+/* ════════════════════════════════════════════════
+   MODAL REFLEXÃO
+   ════════════════════════════════════════════════ */
+function openReflexao(idx) {
+  const c = ST.history[idx]; if (!c) return;
+  document.getElementById('modal-title').textContent = `Semana ${c.week_number||'—'} · Score ${c.lapidados_score||0}/100`;
+  const fs = [
+    { l:'Maior dificuldade', v:c.main_difficulty },
+    { l:'Fatores externos',  v:c.external_factors },
+    { l:'Vitórias',          v:c.wins },
+    { l:'Melhorias',         v:c.improvements },
+    { l:'Pedido de ajuda',   v:c.needs_help },
+  ];
+  document.getElementById('modal-body').innerHTML = fs.filter(f=>f.v).map(f=>`
+    <div class="modal-sec">
+      <div class="modal-lbl">${f.l}</div>
+      <div class="modal-txt">${f.v}</div>
+    </div>`).join('') || '<div class="modal-txt" style="color:var(--t3)">Sem reflexões registradas.</div>';
+  document.getElementById('modal-reflexao').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-reflexao').classList.remove('open'); }
+
+/* ════════════════════════════════════════════════
+   ALREADY DONE
+   ════════════════════════════════════════════════ */
+function showAlreadyDone() {
+  const last = ST.history[0];
+  const rank = getRank(ST.total_points);
+  document.getElementById('already-done').style.display = 'flex';
+  if (last) {
+    document.getElementById('ad-score').innerHTML = `
+      <div style="font-size:11px;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:6px">Semana ${last.week_number||'—'}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:900;color:#FF5C1A;line-height:1">${last.lapidados_score||0}</div>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.4);margin-top:2px">pontos conquistados</div>
+      <div style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.5)">${rank.icon} ${rank.name} · ${ST.total_points} pts · 🔥 ${ST.streak} sem.</div>`;
   }
 }
 
-/* ── Cardio 4-option ────────────────────── */
-function setCardio(pts, id) {
-  D.cardio_score = pts;
-  ['full','partial','no','none'].forEach(k => {
-    document.getElementById('cardio-'+k).classList.toggle('active', k === id);
-  });
+/* ════════════════════════════════════════════════
+   FORM — BUILD GRIDS
+   ════════════════════════════════════════════════ */
+function buildSG(id, field) {
+  document.getElementById(id).innerHTML = Array.from({length:11},(_,v)=>
+    `<button class="scb" data-v="${v}" onclick="setScale('${field}','${id}',${v})">${v}</button>`
+  ).join('');
 }
-
-/* ── Bowel options ───────────────────────── */
-function setBowel(pts, id) {
-  D.bowel_score = pts;
-  ['daily','most','no'].forEach(k => {
-    document.getElementById('bowel-'+k).classList.toggle('active', k === id);
-  });
+function buildOG(id, opts, field) {
+  document.getElementById(id).innerHTML = opts.map(o=>
+    `<button class="ob" onclick="setOpt('${field}','${id}',${o.val},this)">
+      <div class="ob-ic">${o.icon}</div>
+      <div class="ob-lb">${o.lb}</div>
+      <div class="ob-sb">${o.sb}</div>
+      <div class="ob-pt">${o.pt}</div>
+    </button>`
+  ).join('');
 }
+function setScale(f,gid,v){
+  D[f]=v;
+  document.querySelectorAll(`#${gid} .scb`).forEach(b=>b.classList.remove('active'));
+  document.querySelector(`#${gid} .scb[data-v="${v}"]`)?.classList.add('active');
+}
+function setOpt(f,gid,v,btn){
+  D[f]=v;
+  document.querySelectorAll(`#${gid} .ob`).forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function stp(d){ D.off_plan_meals=Math.max(0,D.off_plan_meals+d); document.getElementById('off-val').textContent=D.off_plan_meals; }
 
-/* ── Step validators ─────────────────────── */
-
-/* ── Navigation ─────────────────────────── */
+/* ════════════════════════════════════════════════
+   NAVIGATION
+   ════════════════════════════════════════════════ */
 function goTo(n) {
-  document.getElementById('s' + String(cur)).classList.remove('active');
-  document.getElementById('s' + String(n)).classList.add('active');
+  document.getElementById('s'+String(cur))?.classList.remove('active');
+  document.getElementById('s'+String(n))?.classList.add('active');
   cur = n;
   updateBar();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({top:0,behavior:'smooth'});
+  // lazy build
+  if (n===2 && !document.querySelector('#sg-diet .scb')) buildSG('sg-diet','diet_score');
+  if (n===3) {
+    if (!document.querySelector('#sg-train .scb'))   buildSG('sg-train','training_score');
+    if (!document.querySelector('#og-cardio .ob'))   buildOG('og-cardio',CARDIO_OPTS,'cardio_score');
+  }
+  if (n===4) {
+    if (!document.querySelector('#sg-energy .scb'))  buildSG('sg-energy','energy_level');
+    if (!document.querySelector('#sg-hunger .scb'))  buildSG('sg-hunger','hunger_level');
+  }
+  if (n==='4b') {
+    if (!document.querySelector('#sg-sleep .scb'))   buildSG('sg-sleep','sleep_score');
+    if (!document.querySelector('#og-bowel .ob'))    buildOG('og-bowel',BOWEL_OPTS,'bowel_score');
+  }
+  if (n===6 || n==='5b') {
+    if (n===6) buildReview();
+  }
 }
 
 function updateBar() {
-  const bar    = document.getElementById('progressFill');
-  const lbl    = document.getElementById('stepLbl');
-  const topbar = document.getElementById('topbar');
-  const track  = document.getElementById('progressTrack');
-
-  if (cur === 0) {
-    topbar.style.display = 'none';
-    track.style.display  = 'none';
-    return;
-  }
-  topbar.style.display = '';
-  track.style.display  = '';
-
-  if (cur === 7) {
-    bar.style.width  = '100%';
-    lbl.textContent  = '✓ Concluído';
-    return;
-  }
-  const stepNum = cur === '4b' ? 4.5 : parseInt(String(cur));
-  bar.style.width = (stepNum / TOTAL * 100) + '%';
-  lbl.textContent = (cur === '4b' ? '5' : cur) + ' / ' + TOTAL;
+  const bar  = document.getElementById('progressFill');
+  const lbl  = document.getElementById('stepLbl');
+  const top  = document.getElementById('topbar');
+  const trk  = document.getElementById('progressTrack');
+  if (cur===0||cur===7) { top.style.display='none'; trk.style.display='none'; return; }
+  top.style.display='';  trk.style.display='';
+  const numMap = { '1':1,'2':2,'3':3,'4':4,'4b':5,'5':5,'5b':6,'6':7 };
+  const sn = numMap[String(cur)] !== undefined ? numMap[String(cur)] : parseInt(String(cur));
+  bar.style.width = (sn/7*100)+'%';
+  lbl.textContent = sn+' / 7';
 }
 
-/* ── Validations ────────────────────────── */
-function v1() {
-  const w = parseFloat(document.getElementById('f-weight').value);
-  const h = parseFloat(document.getElementById('f-height').value);
-  if (!w || !h || w < 30 || h < 100) { show('e1'); return; }
-  hide('e1'); D.weight = w; D.height = h; goTo(2);
-}
-function v2() {
-  if (D.diet_score === null) { show('e2'); return; }
-  hide('e2'); goTo(3);
-}
-function v3() {
-  if (D.training_score === null || D.cardio_score === null) { show('e3'); return; }
-  hide('e3'); goTo(4);
-}
-function v4() {
-  if (D.energy_level === null || D.hunger_level === null) { show('e4'); return; }
-  hide('e4'); goTo('4b');
-}
-function show(id) { document.getElementById(id).classList.add('show'); }
-function hide(id) { document.getElementById(id).classList.remove('show'); }
+/* ════════════════════════════════════════════════
+   VALIDATIONS
+   ════════════════════════════════════════════════ */
+const se = id => document.getElementById(id).classList.add('show');
+const he = id => document.getElementById(id).classList.remove('show');
 
-/* ── Score ──────────────────────────────── */
+function v1(){
+  const w=parseFloat(document.getElementById('f-weight').value);
+  const h=parseFloat(document.getElementById('f-height').value);
+  if(!w||!h||w<30||h<100){se('e1');return;}
+  he('e1'); D.weight=w; D.height=h; goTo(2);
+}
+function v2(){ if(D.diet_score===null){se('e2');return;} he('e2'); goTo(3); }
+function v3(){ if(D.training_score===null||D.cardio_score===null){se('e3');return;} he('e3'); goTo(4); }
+function v4(){ if(D.energy_level===null||D.hunger_level===null){se('e4');return;} he('e4'); goTo('4b'); }
+function v4b(){ if(D.sleep_score===null||D.bowel_score===null){se('e4b');return;} he('e4b'); goTo(5); }
+
+/* ════════════════════════════════════════════════
+   REVIEW
+   ════════════════════════════════════════════════ */
+function buildReview() {
+  const CARDIO_LBL_R = { 10:'Completo', 5:'Parcial', 0:'Não fiz' };
+  const BOWEL_LBL_R  = { 5:'Regular', 3:'Na maioria', 0:'Irregular' };
+  const items = [
+    { l:'Peso',      v: D.weight + ' kg' },
+    { l:'Altura',    v: D.height + ' cm' },
+    { l:'Dieta',     v: D.diet_score + '/10' },
+    { l:'Off-plan',  v: D.off_plan_meals + ' ref.' },
+    { l:'Treino',    v: D.training_score + '/10' },
+    { l:'Cardio',    v: CARDIO_LBL_R[D.cardio_score] || D.cardio_score + ' pts' },
+    { l:'Energia',   v: D.energy_level + '/10' },
+    { l:'Fome',      v: D.hunger_level + '/10' },
+    { l:'Sono',      v: (D.sleep_score || 0) + '/10' },
+    { l:'Intestino', v: BOWEL_LBL_R[D.bowel_score] || D.bowel_score + ' pts' },
+  ];
+  document.getElementById('rv-grid').innerHTML = items.map(it => `
+    <div class="rv-item">
+      <div class="rv-label">${it.l}</div>
+      <div class="rv-val">${it.v}</div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════
+   SCORE CALC
+   ════════════════════════════════════════════════ */
 function calcScore() {
-  const diet    = (D.diet_score / 10) * 25;
-  const train   = (D.training_score / 10) * 20;
-  const energy  = (D.energy_level / 10) * 15;
-  const cardio  = D.cardio_score;   // 10 / 5 / 0 / 10
-  const offPlan = Math.max(0, 10 - D.off_plan_meals * 2);
-  const hunger  = ((10 - D.hunger_level) / 10) * 5;
-  const sleep   = (D.sleep_score / 10) * 10;
-  const bowel   = D.bowel_score;    // 5 / 3 / 0
+  const diet    = (D.diet_score/10)*25;
+  const train   = (D.training_score/10)*20;
+  const energy  = (D.energy_level/10)*15;
+  const cardio  = D.cardio_score;
+  const offPlan = Math.max(0,10-D.off_plan_meals*2);
+  const hunger  = ((10-D.hunger_level)/10)*5;
+  const sleep   = (D.sleep_score/10)*10;
+  const bowel   = D.bowel_score;
   return {
-    total:   Math.min(100, Math.round(diet + train + energy + cardio + offPlan + hunger + sleep + bowel)),
-    diet:    Math.round(diet),
-    train:   Math.round(train),
-    energy:  Math.round(energy),
-    cardio:  cardio,
-    offPlan: Math.round(offPlan),
-    hunger:  Math.round(hunger),
-    sleep:   Math.round(sleep),
-    bowel:   bowel,
+    total:  Math.min(100,Math.round(diet+train+energy+cardio+offPlan+hunger+sleep+bowel)),
+    diet:   Math.round(diet),  train:   Math.round(train),
+    energy: Math.round(energy),cardio:  cardio,
+    offPlan:Math.round(offPlan),hunger:  Math.round(hunger),
+    sleep:  Math.round(sleep), bowel:   bowel,
   };
 }
 
 function tier(s) {
-  if (s >= 90) return { name:'✅ Semana impecável!',  color:'#FF5C1A', msg:'Você entregou o máximo essa semana. Score ' + s + '/100 — continue assim.' };
-  if (s >= 75) return { name:'💪 Semana muito sólida', color:'#22c55e', msg:'Score ' + s + '/100. Pequenos ajustes vão te levar ao próximo nível.' };
-  if (s >= 55) return { name:'⚡ Semana em progresso', color:'#3b82f6', msg:'Score ' + s + '/100. Boa base — reveja os pontos que pesaram mais.' };
-  if (s >= 40) return { name:'🎯 Semana desafiadora',  color:'#f59e0b', msg:'Score ' + s + '/100. Identifique seu maior bloqueio e resolva primeiro.' };
-  return         { name:'🚨 Semana difícil',         color:'#ef4444', msg:'Score ' + s + '/100. O Leo vai ajustar o plano. Não desiste!' };
+  if (s>=90) return { name:'✅ Semana Impecável!',    color:'#FF5C1A', msg:'Score '+s+'/100. Você entregou o máximo. Continue assim.' };
+  if (s>=75) return { name:'💪 Semana Muito Sólida',  color:'#22c55e', msg:'Score '+s+'/100. Pequenos ajustes vão te levar ao próximo nível.' };
+  if (s>=55) return { name:'⚡ Semana em Progresso',  color:'#3b82f6', msg:'Score '+s+'/100. Boa base — reveja os pontos que pesaram mais.' };
+  if (s>=40) return { name:'🎯 Semana Desafiadora',   color:'#f59e0b', msg:'Score '+s+'/100. Identifique seu maior bloqueio e resolva primeiro.' };
+  return       { name:'🚨 Semana Difícil',          color:'#ef4444', msg:'Score '+s+'/100. O Leo vai ajustar o plano. Não desiste!' };
 }
 
-/* ── Animate Score Screen ───────────────── */
-function animateScore(sc) {
-  const t   = tier(sc.total);
-  const arc = document.getElementById('ringArc');
-  const circ = 2 * Math.PI * 80; // r=80 → ~502.65
-
-  // Tier text
-  document.getElementById('tierName').textContent = t.name;
-  document.getElementById('tierName').style.color = t.color;
-  document.getElementById('tierMsg').textContent  = t.msg;
-
-  // Ring animation
-  arc.style.strokeDasharray  = circ;
-  arc.style.strokeDashoffset = circ;
-  arc.style.stroke           = t.color;
-  setTimeout(() => {
-    arc.style.strokeDashoffset = circ - (sc.total / 100) * circ;
-  }, 250);
-
-  // Number counter
-  const el = document.getElementById('scoreNum');
-  let n = 0;
-  const step = Math.max(1, Math.ceil(sc.total / 55));
-  const t2 = setInterval(() => {
-    n = Math.min(n + step, sc.total);
-    el.textContent = n;
-    if (n >= sc.total) clearInterval(t2);
-  }, 22);
-
-  // Breakdown bars
-  const maxMap  = { diet:30, train:25, energy:20, cardio:10, offPlan:10, hunger:5 };
-  const barMap  = { diet:'bb-diet', train:'bb-train', energy:'bb-energy', cardio:'bb-cardio', offPlan:'bb-offplan', hunger:'bb-hunger', sleep:'bb-sleep', bowel:'bb-bowel' };
-  const ptsMap  = { diet:'bp-diet', train:'bp-train', energy:'bp-energy', cardio:'bp-cardio', offPlan:'bp-offplan', hunger:'bp-hunger', sleep:'bp-sleep', bowel:'bp-bowel' };
-  const maxLabl = { diet:25, train:20, energy:15, cardio:10, offPlan:10, hunger:5, sleep:10, bowel:5 };
-
-  setTimeout(() => {
-    Object.keys(maxMap).forEach(k => {
-      const pct = (sc[k] / maxMap[k]) * 100;
-      document.getElementById(barMap[k]).style.width = pct + '%';
-      document.getElementById(ptsMap[k]).textContent = sc[k] + '/' + maxLabl[k];
-    });
-  }, 450);
-}
-
-
-/* ── v4b: sleep + bowel ─────────────────── */
-function v4b() {
-  if (D.sleep_score === null || D.bowel_score === null) { show('e4b'); return; }
-  goTo(5);
-}
-/* ── Submit ─────────────────────────────── */
+/* ════════════════════════════════════════════════
+   SUBMIT
+   ════════════════════════════════════════════════ */
 async function submit() {
-  // Read text fields
+  if (!sb) { document.getElementById('e-submit').classList.add('show'); return; }
   D.main_difficulty  = document.getElementById('f-difficulty').value.trim();
   D.external_factors = document.getElementById('f-external').value.trim();
   D.wins             = document.getElementById('f-wins').value.trim();
   D.improvements     = document.getElementById('f-improvements').value.trim();
   D.needs_help       = document.getElementById('f-help').value.trim();
 
-  const btn    = document.getElementById('btn-send');
-  const txt    = document.getElementById('send-txt');
-  const load   = document.getElementById('send-load');
-  const errEl  = document.getElementById('e-submit');
+  const btn  = document.getElementById('btn-send');
+  const txt  = document.getElementById('send-txt');
+  const load = document.getElementById('send-load');
+  const errEl= document.getElementById('e-submit');
 
   const sc = calcScore();
+  NEW_SCORE = sc;
 
-  // Loading state
-  btn.disabled         = true;
-  txt.style.display    = 'none';
-  load.style.display   = 'flex';
+  btn.disabled = true; txt.style.display='none'; load.style.display='flex';
   errEl.classList.remove('show');
 
-  const payload = {
-    patient_id:       D.patient_id,
-    week_number:      D.week_number,
-    year:             D.year,
-    weight:           D.weight,
-    height:           D.height,
-    diet_score:       D.diet_score,
-    off_plan_meals:   D.off_plan_meals,
-    training_score:   D.training_score,
-    cardio_score:     D.cardio_score,
-    hunger_level:     D.hunger_level,
-    sleep_score:      D.sleep_score,
-    bowel_score:      D.bowel_score,
-    energy_level:     D.energy_level,
-    main_difficulty:  D.main_difficulty,
-    external_factors: D.external_factors,
-    wins:             D.wins,
-    improvements:     D.improvements,
-    needs_help:       D.needs_help,
-    lapidados_score:  sc.total,
-  };
-
   try {
-    const { error } = await sb.from('checkins').insert(payload);
+    const { error } = await sb.from('checkins').insert({
+      patient_id:D.patient_id, week_number:D.week_number, year:D.year,
+      weight:D.weight, height:D.height,
+      diet_score:D.diet_score, off_plan_meals:D.off_plan_meals,
+      training_score:D.training_score, cardio_score:D.cardio_score,
+      hunger_level:D.hunger_level, energy_level:D.energy_level,
+      sleep_score:D.sleep_score, bowel_score:D.bowel_score,
+      main_difficulty:D.main_difficulty, external_factors:D.external_factors,
+      wins:D.wins, improvements:D.improvements, needs_help:D.needs_help,
+      lapidados_score:sc.total,
+    });
     if (error) throw error;
     goTo(7);
-    setTimeout(() => animateScore(sc), 350);
-    // fetch accumulated rank after small delay so insert is visible
-    setTimeout(() => fetchAndShowRank(D.patient_id, sc.total), 1200);
-  } catch (err) {
-    console.error('Supabase error:', err);
+    setTimeout(()=>animateScore(sc), 350);
+  } catch(err) {
+    console.error(err);
     errEl.classList.add('show');
-    btn.disabled       = false;
-    txt.style.display  = '';
-    load.style.display = 'none';
+    btn.disabled=false; txt.style.display=''; load.style.display='none';
   }
 }
-</script>
 
-<!-- Already answered this week -->
-<div id="already-done" style="display:none;position:fixed;inset:0;background:#0d0d0d;z-index:999;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
-  <div style="font-size:56px;margin-bottom:16px">✅</div>
-  <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-.3px;margin-bottom:10px">Você já fez seu check-in!</div>
-  <div style="font-size:15px;color:rgba(255,255,255,.6);max-width:300px;line-height:1.6;margin-bottom:24px">
-    Você já respondeu o check-in desta semana. O Leo já recebeu seus dados. 🔥
-  </div>
-  <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:14px 20px;font-size:13px;color:rgba(255,255,255,.5)">
-    Volte na semana que vem para continuar acumulando pontos.
-  </div>
-</div>
+/* ════════════════════════════════════════════════
+   ANIMATE SCORE
+   ════════════════════════════════════════════════ */
+function animateScore(sc) {
+  const t    = tier(sc.total);
+  const arc  = document.getElementById('ringArc');
+  const circ = 2*Math.PI*80;
+
+  document.getElementById('tierName').textContent = t.name;
+  document.getElementById('tierName').style.color  = t.color;
+  document.getElementById('tierMsg').textContent   = t.msg;
+
+  arc.style.strokeDasharray  = circ;
+  arc.style.strokeDashoffset = circ;
+  arc.style.stroke           = t.color;
+  setTimeout(()=>{ arc.style.strokeDashoffset = circ-(sc.total/100)*circ; }, 250);
+
+  // Counter
+  const el = document.getElementById('scoreNum');
+  let n=0; const step=Math.max(1,Math.ceil(sc.total/55));
+  const timer = setInterval(()=>{ n=Math.min(n+step,sc.total); el.textContent=n; if(n>=sc.total)clearInterval(timer); },22);
+
+  // Points earned
+  const newTotal = ST.total_points + sc.total;
+  const rank     = getRank(newTotal);
+  const next     = getNextRank(newTotal);
+  const newStreak= ST.streak + 1;
+
+  document.getElementById('peNum').textContent = '+'+sc.total;
+  document.getElementById('peSub').textContent =
+    `Total acumulado: ${newTotal} pts · ${rank.icon} ${rank.name}` +
+    (newStreak>1?` · 🔥 ${newStreak} sem. seguidas`:'');
+
+  // Streak
+  if (newStreak > 1) {
+    document.getElementById('streakNum').textContent = newStreak;
+    document.getElementById('streakBadge').style.display = 'inline-flex';
+  }
+
+  // Evolution vs previous
+  const prev = ST.history[0];
+  if (prev) {
+    const mt = [
+      { ic:'🥗', nm:'Dieta',    c:D.diet_score||0,     p:prev.diet_score||0,     hi:true },
+      { ic:'🏋️', nm:'Treino',   c:D.training_score||0, p:prev.training_score||0, hi:true },
+      { ic:'🏃', nm:'Cardio',   c:D.cardio_score||0,   p:prev.cardio_score||0,   hi:true },
+      { ic:'🌙', nm:'Sono',     c:D.sleep_score||0,    p:prev.sleep_score||0,    hi:true },
+      { ic:'⚡', nm:'Energia',  c:D.energy_level||0,   p:prev.energy_level||0,   hi:true },
+    ];
+    document.getElementById('s7-evo-rows').innerHTML = mt.map(m=>{
+      const up=m.hi?m.c>m.p:m.c<m.p, dn=m.hi?m.c<m.p:m.c>m.p;
+      return `<div class="evo-row">
+        <div class="evo-ic">${m.ic}</div><div class="evo-nm">${m.nm}</div>
+        <div class="evo-pv">${m.p}</div>
+        <div class="evo-ar" style="color:${up?'var(--green)':dn?'var(--red)':'var(--t3)'}">${up?'↑':dn?'↓':'→'}</div>
+        <div class="evo-cv ${up?'up':dn?'dn':'sm'}">${m.c}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('s7-evo').style.display = 'block';
+  }
+
+  // Rank progress
+  if (next) {
+    const pct = Math.round(((newTotal-rank.min)/(next.min-rank.min))*100);
+    document.getElementById('s7-next-rank').textContent = `${next.icon} ${next.name}`;
+    document.getElementById('s7-next-rank').style.color = next.color;
+    document.getElementById('s7-rank-curr').innerHTML  = `<strong>${newTotal}</strong> pts`;
+    document.getElementById('s7-rank-needed').textContent = `${next.min-newTotal} pts para ${next.name}`;
+    setTimeout(()=>{ document.getElementById('s7-rank-bar').style.width=pct+'%'; }, 450);
+  }
+
+  // AI insight
+  if (ST.ai_insight) {
+    document.getElementById('s7-ai-txt').textContent = ST.ai_insight;
+    document.getElementById('s7-ai').style.display = 'block';
+  }
+
+  // Breakdown
+  const bars = [
+    { b:'bb-diet',  p:'bp-diet',  v:sc.diet,    mx:25 },
+    { b:'bb-train', p:'bp-train', v:sc.train,   mx:20 },
+    { b:'bb-energy',p:'bp-energy',v:sc.energy,  mx:15 },
+    { b:'bb-cardio',p:'bp-cardio',v:sc.cardio,  mx:10 },
+    { b:'bb-off',   p:'bp-off',   v:sc.offPlan, mx:10 },
+    { b:'bb-sleep', p:'bp-sleep', v:sc.sleep,   mx:10 },
+    { b:'bb-bowel', p:'bp-bowel', v:sc.bowel,   mx:5  },
+    { b:'bb-hunger',p:'bp-hunger',v:sc.hunger,  mx:5  },
+  ];
+  setTimeout(()=>{
+    bars.forEach(x=>{
+      const be = document.getElementById(x.b);
+      const pe = document.getElementById(x.p);
+      if (be) be.style.width = (x.v/x.mx*100)+'%';
+      if (pe) pe.textContent = x.v+'/'+x.mx;
+    });
+  }, 450);
+}
+
+/* ════════════════════════════════════════════════
+   BOOT
+   ════════════════════════════════════════════════ */
+init();
+</script>
 </body>
 </html>
