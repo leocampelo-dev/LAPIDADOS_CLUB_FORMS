@@ -818,9 +818,9 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
 /* ════════════════════════════════════════════════
    🔑 CREDENCIAIS
    ════════════════════════════════════════════════ */
-const SUPABASE_URL = 'https://guxsfjfqywebglymasao.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_NAm0P6HDQvJ0jODRJEdZ5A_2zg9BSDw';
-const GEMINI_KEY   = 'AIzaSyCEbnynkNqkwe3wL4xSqBrv_4zLhIS8hOs';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const GEMINI_KEY   = 'YOUR_GEMINI_API_KEY';
 // Obter chave gratuita → https://aistudio.google.com/app/apikey
 
 /* ════════════════════════════════════════════════
@@ -959,7 +959,6 @@ async function init() {
 
     computeStats();
     renderDashboard();
-    if (GEMINI_KEY && GEMINI_KEY !== 'YOUR_GEMINI_API_KEY') fetchAI();
   } catch(e) {
     console.error(e);
     renderDashboard();
@@ -1168,14 +1167,11 @@ function rEvolution(curr, prev) {
 }
 
 function rFocus() {
-  const isAI = GEMINI_KEY && GEMINI_KEY !== 'YOUR_GEMINI_API_KEY';
   return `
     <div class="sh fi d3"><span class="sh-title">🎯 Foco da semana</span><div class="sh-line"></div></div>
     <div class="focus-card fi d3">
       <div class="focus-tag">🎯 FOCO DA SEMANA</div>
-      ${isAI?`<div class="focus-loading" id="focus-loading"><div class="sp" style="width:12px;height:12px;border-width:2px"></div> Analisando seus dados com IA...</div>`:''}
-      <div class="focus-text" id="focus-text" style="${isAI?'opacity:.45':''}">${ST.focus_fallback}</div>
-      <div class="focus-insight" id="focus-insight"></div>
+      <div class="focus-text">${ST.focus_fallback}</div>
     </div>`;
 }
 
