@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 /* ─── TOKENS ─────────────────────────────── */
 :root{
@@ -397,6 +398,91 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
 .rv-preview-lbl{font-size:11px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:1.5px;line-height:1.5}
 .rv-preview-num{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;line-height:1}
 .rv-preview-num span{font-size:14px;color:var(--t3);font-weight:400}
+
+/* ─── SHARE CARD ─────────────────────────── */
+#share-card{
+  position:fixed;left:-9999px;top:0;
+  width:390px;height:844px;overflow:hidden;
+  font-family:'Barlow Condensed',sans-serif;
+  background:#060606;
+}
+.sc-wrap{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;padding:48px 36px;
+  background:#060606;
+}
+.sc-orb-top{
+  position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:300px;height:300px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,92,26,.35) 0%,transparent 70%);
+  pointer-events:none;
+}
+.sc-orb-bot{
+  position:absolute;bottom:-80px;right:-40px;
+  width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,61,0,.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.sc-logo{
+  position:absolute;top:44px;left:0;right:0;text-align:center;
+  font-size:11px;font-weight:900;letter-spacing:4px;
+  text-transform:uppercase;color:rgba(255,92,26,.9);
+}
+.sc-center{
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:0;
+}
+.sc-score-big{
+  font-size:148px;font-weight:900;line-height:.9;
+  letter-spacing:-6px;color:#fff;
+}
+.sc-score-sub{
+  font-size:11px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:rgba(255,255,255,.4);
+  margin-top:6px;margin-bottom:28px;
+}
+.sc-tier-txt{
+  font-size:22px;font-weight:800;letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:32px;
+}
+.sc-rank-pill{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:100px;padding:10px 22px;
+  margin-bottom:28px;
+}
+.sc-rank-ic{font-size:22px;line-height:1}
+.sc-rank-nm{font-size:16px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.sc-name-txt{
+  font-size:28px;font-weight:700;color:rgba(255,255,255,.85);
+  letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;
+}
+.sc-week-txt{font-size:13px;color:rgba(255,255,255,.35);letter-spacing:1.5px;margin-bottom:0}
+.sc-footer{
+  position:absolute;bottom:44px;left:0;right:0;text-align:center;
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(255,255,255,.25);
+}
+.sc-divider{width:48px;height:2px;background:rgba(255,92,26,.5);border-radius:1px;margin:0 auto 20px}
+
+/* Botão compartilhar */
+.btn-share{
+  width:100%;padding:17px;border-radius:14px;
+  background:linear-gradient(135deg,#833AB4,#C13584,#E1306C,#F77737);
+  border:none;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:16px;font-weight:900;letter-spacing:2px;
+  text-transform:uppercase;color:#fff;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:10px;transition:transform .15s;
+  box-shadow:0 8px 28px rgba(225,48,108,.3);
+}
+.btn-share:active{transform:scale(.98)}
+.btn-share:disabled{opacity:.6;cursor:not-allowed}
+.btn-share-sub{font-size:11px;color:var(--t3);text-align:center;margin-bottom:14px}
 
 /* ─── SCORE REVEAL ───────────────────────── */
 .score-screen{padding:28px 0 16px;display:flex;flex-direction:column;align-items:center;text-align:center}
@@ -789,6 +875,34 @@ textarea{resize:none;min-height:85px;line-height:1.6;font-size:13.5px}
 
     <div class="success-note">✅ Dados registrados com sucesso.<br/>O Leo vai analisar e entrar em contato. 🔥</div>
 
+    <div style="height:20px"></div>
+    <button class="btn-share" id="btn-share" onclick="shareScore()">
+      📸 Compartilhar no Instagram
+    </button>
+    <div class="btn-share-sub" id="share-sub">Gera um card do seu score para os Stories</div>
+
+  </div>
+</div>
+
+<!-- CARD OCULTO PARA CAPTURA -->
+<div id="share-card">
+  <div class="sc-wrap">
+    <div class="sc-orb-top"></div>
+    <div class="sc-orb-bot"></div>
+    <div class="sc-logo">Lapidados Club</div>
+    <div class="sc-center">
+      <div class="sc-score-big" id="sc-num">0</div>
+      <div class="sc-score-sub">Lapidados Score</div>
+      <div class="sc-tier-txt" id="sc-tier">—</div>
+      <div class="sc-divider"></div>
+      <div class="sc-rank-pill">
+        <div class="sc-rank-ic" id="sc-rank-ic">🪨</div>
+        <div class="sc-rank-nm" id="sc-rank-nm" style="color:#9ca3af">BRUTO</div>
+      </div>
+      <div class="sc-name-txt" id="sc-pname">—</div>
+      <div class="sc-week-txt" id="sc-week">—</div>
+    </div>
+    <div class="sc-footer">lapidadosclub.com.br</div>
   </div>
 </div>
 
@@ -827,11 +941,11 @@ const GEMINI_KEY   = 'YOUR_GEMINI_API_KEY';
    RANKS & BADGES
    ════════════════════════════════════════════════ */
 const RANKS = [
-  { name:'BRUTO',      icon:'🪨', min:0,    max:199,      color:'#9ca3af', glow:'rgba(156,163,175,.25)' },
-  { name:'DESTRAVADO', icon:'🧠', min:200,  max:499,      color:'#60a5fa', glow:'rgba(96,165,250,.25)'  },
-  { name:'AFIADO',     icon:'⚡', min:500,  max:999,      color:'#a78bfa', glow:'rgba(167,139,250,.25)' },
-  { name:'IMPARÁVEL',  icon:'🔥', min:1000, max:1999,     color:'#fb923c', glow:'rgba(251,146,60,.25)'  },
-  { name:'LAPIDADO',   icon:'👑', min:2000, max:Infinity, color:'#fcd34d', glow:'rgba(252,211,77,.25)'  },
+  { name:'BRUTO',    icon:'🪨', min:0,    max:199,      color:'#9ca3af', glow:'rgba(156,163,175,.25)' },
+  { name:'POLIDO',   icon:'🧠', min:200,  max:499,      color:'#60a5fa', glow:'rgba(96,165,250,.25)'  },
+  { name:'AFIADO',   icon:'⚡', min:500,  max:999,      color:'#a78bfa', glow:'rgba(167,139,250,.25)' },
+  { name:'IMPARÁVEL',icon:'🔥', min:1000, max:1999,     color:'#fb923c', glow:'rgba(251,146,60,.25)'  },
+  { name:'LAPIDADO', icon:'👑', min:2000, max:Infinity, color:'#fcd34d', glow:'rgba(252,211,77,.25)'  },
 ];
 const getRank    = p => RANKS.find(r => p >= r.min && p <= r.max) || RANKS[0];
 const getNextRank= p => { const i=RANKS.findIndex(r=>p>=r.min&&p<=r.max); return i<RANKS.length-1?RANKS[i+1]:null; };
@@ -1679,6 +1793,74 @@ function animateScore(sc) {
       if (pe) pe.textContent = x.v+'/'+x.mx;
     });
   }, 450);
+}
+
+/* ════════════════════════════════════════════════
+   SHARE CARD — Instagram Stories
+   ════════════════════════════════════════════════ */
+async function shareScore() {
+  const sc = NEW_SCORE;
+  if (!sc) return;
+
+  const btn = document.getElementById('btn-share');
+  const sub = document.getElementById('share-sub');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="sp"></div> Gerando card...';
+
+  // Popula o card oculto
+  const newTotal = ST.total_points + sc.total;
+  const rank     = getRank(newTotal);
+  const t        = tier(sc.total);
+
+  document.getElementById('sc-num').textContent     = sc.total;
+  document.getElementById('sc-num').style.color     = t.color;
+  document.getElementById('sc-tier').textContent    = t.name;
+  document.getElementById('sc-tier').style.color    = t.color;
+  document.getElementById('sc-rank-ic').textContent = rank.icon;
+  document.getElementById('sc-rank-nm').textContent = rank.name;
+  document.getElementById('sc-rank-nm').style.color = rank.color;
+  document.getElementById('sc-pname').textContent   = ST.name.toUpperCase();
+  document.getElementById('sc-week').textContent    = `Semana ${CUR_WEEK} · ${CUR_YEAR}`;
+
+  try {
+    // Aguarda fontes carregarem
+    await document.fonts.ready;
+
+    const canvas = await html2canvas(document.getElementById('share-card'), {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#060606',
+      logging: false,
+    });
+
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 1.0));
+    const file = new File([blob], `lapidados-score-semana${CUR_WEEK}.png`, { type:'image/png' });
+
+    // Tenta Web Share API (mobile — abre direto no Instagram)
+    if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({
+        files: [file],
+        title: `Meu score no Lapidados Club — Semana ${CUR_WEEK}`,
+      });
+      sub.textContent = '✅ Card compartilhado!';
+    } else {
+      // Fallback: download da imagem
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = `lapidados-score-semana${CUR_WEEK}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      sub.textContent = '⬇️ Imagem salva — abra no Instagram e compartilhe nos Stories!';
+    }
+  } catch(e) {
+    console.error('Share error:', e);
+    sub.textContent = 'Erro ao gerar card. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📸 Compartilhar no Instagram';
+  }
 }
 
 /* ════════════════════════════════════════════════
