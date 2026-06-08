@@ -1837,88 +1837,172 @@ function animateScore(sc) {
 async function shareScore() {
   const sc = NEW_SCORE;
   if (!sc) return;
-
   const btn = document.getElementById('btn-share');
   const sub = document.getElementById('share-sub');
   btn.disabled = true;
   btn.innerHTML = '<div class="sp"></div> Gerando card...';
-
-  // Popula o card oculto
-  const newTotal  = ST.total_points + sc.total;
-  const rank      = getRank(newTotal);
-  const next      = getNextRank(newTotal);
-  const t         = tier(sc.total);
-  const weeksPlan = ST.history.length + 1; // semanas no plano (histórico + check-in atual)
-
-  // Score e tier
-  document.getElementById('sc-num').textContent     = sc.total;
-  document.getElementById('sc-num').style.color     = t.color;
-  document.getElementById('sc-tier').textContent    = t.name;
-  document.getElementById('sc-tier').style.color    = t.color;
-
-  // Pts ganhos
-  document.getElementById('sc-pts').textContent     = '+' + sc.total;
-
-  // Progress bar
-  if (next) {
-    const pct = Math.round(((newTotal - rank.min) / (next.min - rank.min)) * 100);
-    const rem = next.min - newTotal;
-    document.getElementById('sc-prog-cur').textContent    = rank.name;
-    document.getElementById('sc-prog-nxt').textContent    = next.name;
-    document.getElementById('sc-prog-nxt').style.color    = next.color;
-    document.getElementById('sc-prog-fill').style.width   = pct + '%';
-    document.getElementById('sc-prog-info').textContent   = newTotal + ' pts · faltam ' + rem + ' para ' + next.name;
-    document.getElementById('sc-prog-wrap').style.display = 'block';
-  } else {
-    document.getElementById('sc-prog-wrap').style.display = 'none';
-  }
-
-  // Rank, nome e semana no plano
-  document.getElementById('sc-rank-ic').textContent  = rank.icon;
-  document.getElementById('sc-rank-nm').textContent  = rank.name;
-  document.getElementById('sc-rank-nm').style.color  = rank.color;
-  document.getElementById('sc-pname').textContent    = ST.name.toUpperCase();
-
-  // Semana no plano (só exibe se tiver histórico confiável)
-  const weekEl = document.getElementById('sc-week');
-  if (weeksPlan >= 1) {
-    weekEl.textContent = 'Semana ' + weeksPlan + ' no plano';
-  } else {
-    weekEl.textContent = '';
-  }
+  sub.textContent = '';
 
   try {
-    // Aguarda fontes carregarem
     await document.fonts.ready;
 
-    const canvas = await html2canvas(document.getElementById('share-card'), {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#060606',
-      logging: false,
+    const newTotal = ST.total_points + sc.total;
+    const rank     = getRank(newTotal);
+    const next     = getNextRank(newTotal);
+    const t        = tier(sc.total);
+
+    // Canvas 1080x1920 (proporção Stories)
+    const W = 1080, H = 1920;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    // ── Fundo
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0,   '#0a0a0a');
+    bg.addColorStop(0.5, '#0f0a06');
+    bg.addColorStop(1,   '#060606');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Glow laranja no topo
+    const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 600);
+    glow.addColorStop(0,   'rgba(255,92,26,0.22)');
+    glow.addColorStop(1,   'rgba(255,92,26,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Helper: texto centralizado
+    function cText(text, y, font, color) {
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, W/2, y);
+    }
+
+    // ── Helper: rounded rect
+    function roundRect(x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill)   { ctx.fillStyle = fill;     ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.stroke(); }
+    }
+
+    // ── Logo topo
+    cText('LAPIDADOS CLUB', 140, '700 52px "Barlow Condensed"', '#FF5C1A');
+
+    // ── Rank icon grande
+    ctx.font = '180px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(rank.icon, W/2, 420);
+
+    // ── Nome do atleta
+    cText(ST.name.toUpperCase(), 530, '800 72px "Barlow Condensed"', '#F2F2F2');
+
+    // ── Semana no plano
+    const weeksPlan = ST.history.length + 1;
+    cText('Semana ' + weeksPlan + ' no plano', 600, '400 38px Barlow', '#888');
+
+    // ── Card score central
+    roundRect(90, 650, W - 180, 380, 32, 'rgba(255,255,255,0.04)', 'rgba(255,92,26,0.3)');
+
+    cText('LAPIDADOS SCORE', 730, '700 34px "Barlow Condensed"', '#888');
+
+    // Score número grande
+    cText(String(sc.total), 870, '900 200px "Barlow Condensed"', t.color);
+
+    // Tier name
+    cText(t.name, 960, '700 44px "Barlow Condensed"', t.color);
+
+    // Pts ganhos
+    cText('+' + sc.total + ' pts conquistados esta semana', 1040, '500 36px Barlow', '#aaa');
+
+    // ── Rank atual
+    roundRect(90, 1090, W - 180, 120, 24, 'rgba(255,255,255,0.03)', 'rgba(255,255,255,0.08)');
+    ctx.font = '700 38px "Barlow Condensed"';
+    ctx.fillStyle = rank.color || '#FF5C1A';
+    ctx.textAlign = 'center';
+    ctx.fillText(rank.icon + '  ' + rank.name.toUpperCase() + '  ·  ' + newTotal + ' pts', W/2, 1162);
+
+    // ── Progress bar (se não for rank máximo)
+    if (next) {
+      const pct = Math.min((newTotal - rank.min) / (next.min - rank.min), 1);
+      const bx = 120, by = 1260, bw = W - 240, bh = 18;
+
+      // Track
+      roundRect(bx, by, bw, bh, 9, 'rgba(255,255,255,0.08)');
+      // Fill
+      const grad = ctx.createLinearGradient(bx, by, bx + bw, by);
+      grad.addColorStop(0, '#FF5C1A');
+      grad.addColorStop(1, '#FF3D00');
+      roundRect(bx, by, bw * pct, bh, 9, grad);
+
+      // Labels
+      ctx.font = '500 30px Barlow';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#666';
+      ctx.fillText(rank.name, bx, 1320);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = next.color || '#aaa';
+      ctx.fillText(next.name, bx + bw, 1320);
+    }
+
+    // ── Breakdown scores (minigrid)
+    const items = [
+      { icon:'🥗', label:'Dieta',   val: sc.diet   || 0, max: 30 },
+      { icon:'🏋️', label:'Treino',  val: sc.training|| 0, max: 20 },
+      { icon:'⚡', label:'Energia', val: sc.energy || 0, max: 10 },
+      { icon:'🌙', label:'Sono',    val: sc.sleep  || 0, max: 10 },
+    ];
+    const gx = 90, gy = 1380, gw = (W - 180 - 30) / 4;
+    items.forEach((item, i) => {
+      const x = gx + i * (gw + 10);
+      roundRect(x, gy, gw, 160, 20, 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0.07)');
+      ctx.font = '32px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(item.icon, x + gw/2, gy + 52);
+      ctx.font = '700 44px "Barlow Condensed"';
+      ctx.fillStyle = '#FF5C1A';
+      ctx.textAlign = 'center';
+      ctx.fillText(item.val, x + gw/2, gy + 110);
+      ctx.font = '500 24px Barlow';
+      ctx.fillStyle = '#666';
+      ctx.fillText(item.label, x + gw/2, gy + 148);
     });
 
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png', 1.0));
-    const file = new File([blob], `lapidados-score-semana${CUR_WEEK}.png`, { type:'image/png' });
+    // ── Rodapé
+    cText('lapidadosclub.com.br', H - 80, '600 36px Barlow', '#444');
+    cText('Check-in Semanal', H - 35, '400 28px Barlow', '#333');
 
-    // Tenta Web Share API (mobile — abre direto no Instagram)
-    if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+    // ── Gera blob e compartilha
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png', 1.0));
+    const file = new File([blob], `lapidados-score-semana${CUR_WEEK}.png`, { type: 'image/png' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
         title: `Meu score no Lapidados Club — Semana ${CUR_WEEK}`,
       });
       sub.textContent = '✅ Card compartilhado!';
     } else {
-      // Fallback: download da imagem
       const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href     = url;
+      const a = document.createElement('a');
+      a.href = url;
       a.download = `lapidados-score-semana${CUR_WEEK}.png`;
       a.click();
       URL.revokeObjectURL(url);
       sub.textContent = '⬇️ Imagem salva — abra no Instagram e compartilhe nos Stories!';
     }
+
   } catch(e) {
     console.error('Share error:', e);
     sub.textContent = 'Erro ao gerar card. Tente novamente.';
